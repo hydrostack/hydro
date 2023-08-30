@@ -4,8 +4,6 @@ outline: deep
 
 # How it works
 
-## Key technologies
-
 Hydro utilizes the following technologies to make it all work:
 
 - **Razor views (\*.cshtml)**  
@@ -18,15 +16,3 @@ Hydro utilizes the following technologies to make it all work:
 
 - **Alpine.js**  
   Alpine.js stands as a base for requests execution and  DOM swapping. But beyond that, Alpine.js also empowers users by providing a framework for adding rich, client-side interactivity to the standard HTML. So, not only does it serve Hydro's internal operations, but it also provides an expansion point for users to enhance their web applications with powerful, interactive experiences.
-
-## State
-
-State of the components is serialized, encrypted and stored on the rendered page. Whenever there is call from that component to the back-end, the state is attached to the request headers.
-
-## Components nesting
-
-Hydro components can be nested, which means you can put one Hydro component inside the other with no limits. When the state of the parent component changes, the nested components won't be updated. If there is a need to update the nested components, it has to be communicated via events or the key of the component has to change (key parameter used for rendering the component).
-
-## Same component rendered multiple times on the same view
-
-It's possible to use the same component multiple times on the same view, but then you have to provide a unique key for each instance. For more details go to the [parameters](/features/parameters) page.

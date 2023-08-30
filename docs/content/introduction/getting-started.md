@@ -30,7 +30,7 @@ In `_ViewImports.cshtml` add:
 ```razor
 @addTagHelper *, {Your project assembly name}
 @addTagHelper *, Hydro
-```
+````
 
 In layout's `head` tag:
 ```html
@@ -46,3 +46,5 @@ In layout's `head` tag:
 ```
 
 For Alpine.js you can use CDN as shown above or you can host it yourself.
+
+Now you are ready to create you first [component](/features/components).

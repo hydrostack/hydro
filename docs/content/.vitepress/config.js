@@ -24,8 +24,8 @@ export default defineConfig({
         text: 'Features',
         items: [
           { text: 'Components', link: '/features/components' },
-          { text: 'Binding', link: '/features/binding' },
           { text: 'Parameters', link: '/features/parameters' },
+          { text: 'Binding', link: '/features/binding' },
           { text: 'Actions', link: '/features/actions' },
           { text: 'Events', link: '/features/events' },
           { text: 'Form validation', link: '/features/form-validation' },
