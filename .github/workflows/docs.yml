@@ -1,7 +1,11 @@
 name: Documentation
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
 
 permissions:
   contents: read
