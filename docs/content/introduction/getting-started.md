@@ -26,6 +26,30 @@ builder.Services.AddHydro();
 app.UseHydro(builder.Environment);
 ```
 
+> **_NOTE:_** Make sure that `UseHydro` is called after `UseRouting`.
+> 
+Sample Project.cs file:
+
+```c#
+using Hydro.Configuration;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddHydro(); // for Hydro
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthorization();
+app.MapRazorPages();
+app.UseHydro(builder.Environment); // for Hydro
+
+app.Run();
+```
+
 In `_ViewImports.cshtml` add:
 ```razor
 @addTagHelper *, {Your project assembly name}
@@ -42,7 +66,7 @@ In layout's `head` tag:
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
 <!-- Hydro script -->
-<script src="~/hydro.js" asp-append-version="true"></script>
+<script defer src="~/hydro.js" asp-append-version="true"></script>
 ```
 
 For Alpine.js you can use CDN as shown above or you can host it yourself.

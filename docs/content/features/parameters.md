@@ -33,6 +33,18 @@ Or when using `vc:*` tag helpers:
 <vc:counter parameters="@(new { Count = 10 })"/>
 ```
 
+or
+
+```c#
+<!-- Index.cshtml -->
+    
+@(await Component.InvokeAsync<Counter>(new { parameters = new { Count = 10 } }))
+```
+
+## State of the parameters in time
+
+The values are passed to the component only once and any update to the parameters won't refresh the parent component. If you want the component to refresh its state, you would have to use events or change the [key parameter](#key) of the component.  
+
 ## Key
 
 When rendering a Hydro component, you can provide an optional `key` argument:
