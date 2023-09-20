@@ -28,7 +28,7 @@ app.UseHydro(builder.Environment);
 
 > **_NOTE:_** Make sure that `UseHydro` is called after `UseRouting`.
 > 
-Sample Project.cs file:
+Sample Program.cs file:
 
 ```c#
 using Hydro.Configuration;
