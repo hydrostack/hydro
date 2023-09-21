@@ -4,7 +4,7 @@
   const configMeta = document.querySelector('meta[name="hydro-config"]');
   const config = configMeta ? JSON.parse(configMeta.content) : {};
 
-  async function loadPageContent(url, selector, push) {
+  async function loadPageContent(url, selector, push, condition) {
     const element = document.querySelector(selector);
     element.classList.add('hydro-loading');
 
@@ -18,6 +18,10 @@
         method: 'GET',
         headers
       });
+
+      if (condition && !condition()) {
+        throw new Error(`Request stopped`);
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -39,8 +43,11 @@
         }
       }
     } catch (error) {
-      console.error('Fetch error: ', error);
-      window.location.href = url;
+      if (error.message === 'Request stopped') {
+      } else {
+        console.error('Fetch error: ', error);
+        window.location.href = url;
+      }
     } finally {
       element.classList.remove('hydro-loading');
     }
@@ -142,15 +149,20 @@
 
     const parentComponent = findComponent(component.parentElement);
 
-    const classTimeout = setTimeout(() => el.classList.add('hydro-request'), 100);
+    const classTimeout = setTimeout(() => el.classList.add('hydro-request'), 200);
 
     let elementsToDisable = [];
 
+    let disableTimer = null;
+
     if (!eventData && type !== 'bind') {
       elementsToDisable = [el];
-      elementsToDisable.forEach((elementToDisable) => {
-        elementToDisable.disabled = true;
-      });
+
+      disableTimer = setTimeout(() => {
+        elementsToDisable.forEach((elementToDisable) => {
+          elementToDisable.disabled = true;
+        });
+      }, 200);
     }
 
     await enqueueHydroPromise('', async () => {
@@ -238,6 +250,7 @@
       } finally {
         if (!eventData) {
           clearTimeout(classTimeout);
+          clearTimeout(disableTimer);
           el.classList.remove('hydro-request');
 
           elementsToDisable.forEach((elementToDisable) => {
@@ -348,12 +361,23 @@ document.addEventListener('alpine:init', () => {
     });
   });
 
+
+  let currentBoostUrl;
+
   Alpine.directive('boost', (el, {expression}, {effect, cleanup}) => {
     effect(() => {
       const handleClick = async (event) => {
         event.preventDefault();
-        const url = event.target.getAttribute('href');
-        await window.Hydro.loadPageContent(url, 'body', true);
+        const el = event.target;
+        const url = el.getAttribute('href');
+        currentBoostUrl = url;
+        const classTimeout = setTimeout(() => el.classList.add('hydro-request'), 200);
+        try {
+          await window.Hydro.loadPageContent(url, 'body', true, () => currentBoostUrl === url);
+        } finally {
+          clearTimeout(classTimeout);
+          el.classList.remove('hydro-request')
+        }
       };
 
       const links = [el, ...el.querySelectorAll('a')].filter(el => el.tagName === 'A');

@@ -29,7 +29,7 @@ public sealed class HydroActionTagHelper : TagHelper
     /// Hydro component's action to execute
     /// </summary>
     [HtmlAttributeName(TagAttribute)]
-    public Delegate Action { get; set; }
+    public string Method { get; set; }
     
     /// <summary>
     /// Parameters passed to the action
@@ -71,8 +71,9 @@ public sealed class HydroActionTagHelper : TagHelper
         {
             return;
         }
-        
-        output.Attributes.Add("x-hydro-action", $"/hydro/{ViewContext.ViewData.Model.GetType().Name}/{Action.Method.Name}".ToLower());
+
+        var methodName = Method.Replace("Model.", string.Empty);
+        output.Attributes.Add("x-hydro-action", $"/hydro/{ViewContext.ViewData.Model.GetType().Name}/{methodName}".ToLower());
 
         if (Parameters.Any())
         {

@@ -79,7 +79,7 @@ To create Hydro component, go to your components folder, for example in case of 
 
 <div>
   Count: <strong>@Model.Count</strong>
-  <button hydro-action="Model.Add">Add</button>
+  <button hydro-action="Add">Add</button>
 </div>
 ```
 ```c#
