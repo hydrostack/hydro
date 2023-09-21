@@ -30,11 +30,11 @@ A DOM element can be bound to an action method by using the `hydro-action` tag h
 @model Counter
 <div>
   Count: <strong>@Model.Count</strong>
-  <button hydro-action="Model.Add">Add</button>
+  <button hydro-action="Add">Add</button>
 </div>
 ```
 
-The attribute `hydro-action` expects a delegate to the callback, in our case `Model.Add`.
+The attribute `hydro-action` expects a name of the callback method, in our case `Add`.
 
 ## Arguments
 
@@ -62,7 +62,7 @@ public class Counter : HydroComponent
 @model Counter
 <div>
   Count: <strong>@Model.Count</strong>
-  <button hydro-action="Model.Set" param-newValue="20">Add</button>
+  <button hydro-action="Set" param-newValue="20">Add</button>
 </div>
 ```
 

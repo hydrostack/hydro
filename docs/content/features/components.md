@@ -21,7 +21,7 @@ Let's see it in action:
 
 <div>
   Count: <strong>@Model.Count</strong>
-  <button hydro-action="@Model.Add">Add</button>
+  <button hydro-action="Add">Add</button>
 </div>
 ```
 

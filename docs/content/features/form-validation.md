@@ -27,7 +27,7 @@ public class ProductForm : HydroComponent
 
 @model ProductForm
 
-<form hydro-action="Model.Submit">
+<form hydro-action="Submit">
   <label asp-for="Name"></label>
   <input asp-for="Name"/>
   <span asp-validation-for="Name"></span>  

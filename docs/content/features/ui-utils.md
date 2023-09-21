@@ -87,5 +87,5 @@ Attribute added to elements that triggered a Hydro operation and is currently be
 
 @model MyComponent
 
-<button hydro-action="@Model.Submit">Submit <div class="loader">...</div></button>
+<button hydro-action="Submit">Submit <div class="loader">...</div></button>
 ```
