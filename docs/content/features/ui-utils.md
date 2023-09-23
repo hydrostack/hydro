@@ -18,8 +18,8 @@ Attribute applied directly on a link:
 Attribute applied directly on a parent of the links:
 ```html
 <ul hydro-boost>
-  <li><a href="/page1" hydro-boost>My page 1</a></li>
-  <li><a href="/page2" hydro-boost>My page 2</a></li>
+  <li><a href="/page1">My page 1</a></li>
+  <li><a href="/page2">My page 2</a></li>
 </ul>
 ```
 
