@@ -72,6 +72,11 @@ public sealed class HydroActionTagHelper : TagHelper
             return;
         }
 
+        if (!output.Attributes.Any(a => a.Name.StartsWith("x-")))
+        {
+            output.Attributes.Add(new("x-data"));
+        }
+        
         var methodName = Method.Replace("Model.", string.Empty);
         output.Attributes.Add("x-hydro-action", $"/hydro/{ViewContext.ViewData.Model.GetType().Name}/{methodName}".ToLower());
 
@@ -79,8 +84,7 @@ public sealed class HydroActionTagHelper : TagHelper
         {
             output.Attributes.Add(new TagHelperAttribute("hydro-parameters", new HtmlString(JsonConvert.SerializeObject(_parameters)), HtmlAttributeValueStyle.SingleQuotes));
         }
-
-        output.Attributes.Add(new("x-data"));
+        
         output.Attributes.Add(new("data-loading-disable"));
 
         if (output.TagName.ToLower() == "a" && !output.Attributes.ContainsName("href"))
