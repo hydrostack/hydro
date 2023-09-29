@@ -51,6 +51,27 @@ public class Products : HydroComponent
 public record CartPayload(HashSet<string> ProductsIds);
 ```
 
+### Reading the payload
+
+Use the following method to read the previously passed payload:
+
+```csharp
+// CartSummary.cshtml.cs
+
+public class CartSummary : HydroComponent
+{
+    public CartPayload Payload { get; set; }
+
+    public override void Mount()
+    {
+        Payload = GetPayload<CartPayload>();
+    }
+    
+    // ...
+}
+```
+
+
 ## Hard navigation
 
 If full page reload is needed, use the `Redirect` method:
