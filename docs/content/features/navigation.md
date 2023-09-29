@@ -35,7 +35,7 @@ Sometimes it's needed to pass a payload object from one page to another. For suc
 
 public class Products : HydroComponent
 {
-    public HashList<string> SelectedProductsIds { get; set; }
+    public HashSet<string> SelectedProductsIds { get; set; }
     
     // ... product page logic
     
@@ -48,7 +48,7 @@ public class Products : HydroComponent
 ```csharp
 // CartPayload.cs
 
-public record CartPayload(HashList<string> ProductsIds);
+public record CartPayload(HashSet<string> ProductsIds);
 ```
 
 ## Hard navigation
