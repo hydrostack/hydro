@@ -201,14 +201,28 @@ internal static class PropertyInjector
 
         if (!destinationType.IsArray || valueToConvert.Count <= 1)
         {
-            return converter.ConvertFromString(valueToConvert.ToString());
+            try
+            {
+                return converter.ConvertFromString(valueToConvert.ToString());
+            }
+            catch
+            {
+                return Activator.CreateInstance(destinationType);
+            }
         }
 
         var elementType = destinationType.GetElementType();
         var array = Array.CreateInstance(elementType, valueToConvert.Count);
         for (var i = 0; i < valueToConvert.Count; i++)
         {
-            array.SetValue(converter.ConvertFromString(valueToConvert[i]), i);
+            try
+            {
+                array.SetValue(converter.ConvertFromString(valueToConvert[i]), i);
+            }
+            catch
+            {
+                array.SetValue(Activator.CreateInstance(elementType), i);
+            }
         }
 
         return array;

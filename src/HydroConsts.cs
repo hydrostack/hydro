@@ -9,6 +9,7 @@ internal static class HydroConsts
         public const string Boosted = "Hydro-Boosted";
         public const string Hydro = "Hydro-Request";
         public const string Parameters = "Hydro-Parameters";
+        public const string Payload = "Hydro-Payload";
         public const string RenderedComponentIds = "hydro-all-ids";
     }
 

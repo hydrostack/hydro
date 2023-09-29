@@ -10,20 +10,28 @@ namespace Hydro;
 public static class HydroHttpResponseExtensions
 {
     /// <summary>
-    /// Add a response header that instructs Hydro to redirect to a specific page
+    /// Add a response header that instructs Hydro to redirect to a specific page with page reload
     /// </summary>
     /// <param name="response">HttpResponse instance</param>
     /// <param name="url">URL to redirect to</param>
-    /// <param name="hard">Set to true, to make a full page reload</param>
-    public static void HydroRedirect(this HttpResponse response, string url, bool hard = false)
+    public static void HydroRedirect(this HttpResponse response, string url) =>
+        response.Headers.Add("Hydro-Redirect", new StringValues(url));
+
+    /// <summary>
+    /// Add a response header that instructs Hydro to redirect to a specific page without page reload
+    /// </summary>
+    /// <param name="response">HttpResponse instance</param>
+    /// <param name="url">URL to redirect to</param>
+    /// <param name="payload">Object to pass to destination page</param>
+    public static void HydroLocation(this HttpResponse response, string url, object payload = null)
     {
-        if (hard)
+        var data = new
         {
-            response.Headers.Add("Hydro-Redirect", new StringValues(url));
-        }
-        else
-        {
-            response.Headers.Add("Hydro-Location", new StringValues(JsonConvert.SerializeObject(new { path = url, target = "#app" })));
-        }
+            path = url,
+            target = "body",
+            payload
+        };
+
+        response.Headers.Add("Hydro-Location", new StringValues(JsonConvert.SerializeObject(data)));
     }
 }

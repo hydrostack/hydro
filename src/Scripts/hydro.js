@@ -4,7 +4,7 @@
   const configMeta = document.querySelector('meta[name="hydro-config"]');
   const config = configMeta ? JSON.parse(configMeta.content) : {};
 
-  async function loadPageContent(url, selector, push, condition) {
+  async function loadPageContent(url, selector, push, condition, payload) {
     const element = document.querySelector(selector);
     element.classList.add('hydro-loading');
 
@@ -13,6 +13,10 @@
         'Hydro-Request': 'true',
         'Hydro-Boosted': 'true'
       };
+
+      if (payload) {
+        headers['Hydro-Payload'] = JSON.stringify(payload);
+      }
 
       const response = await fetch(url, {
         method: 'GET',
@@ -134,7 +138,7 @@
 
     const formData = eventName === 'submit'
       ? new FormData(el.closest("form"))
-      : new FormData();
+      : null;
 
     await hydroRequest(el, url, null, formData);
   }
@@ -218,24 +222,29 @@
                 from.checked = to.checked;
               }
 
+              if (from.tagName === "INPUT" && from.type === 'text' && from.value !== to.getAttribute("value")) {
+                to.setAttribute("data-update-on-blur", "");
+              }
+
               counter++;
             }
           });
 
-          const hxLocationHeader = response.headers.get('Hydro-Location');
-          if (hxLocationHeader) {
-            let hxLocation = JSON.parse(hxLocationHeader);
-            await loadPageContent(hxLocation.path, hxLocation.target || 'body', true);
+          const locationHeader = response.headers.get('Hydro-Location');
+          if (locationHeader) {
+            let locationData = JSON.parse(locationHeader);
+
+            await loadPageContent(locationData.path, locationData.target || 'body', true, null, locationData.payload);
           }
 
-          const hxRedirectHeader = response.headers.get('Hydro-Redirect');
-          if (hxRedirectHeader) {
-            window.location.href = hxRedirectHeader;
+          const redirectHeader = response.headers.get('Hydro-Redirect');
+          if (redirectHeader) {
+            window.location.href = redirectHeader;
           }
 
-          const hxTriggerHeader = response.headers.get('Hydro-Trigger');
-          if (hxTriggerHeader) {
-            const triggers = JSON.parse(hxTriggerHeader);
+          const triggerHeader = response.headers.get('Hydro-Trigger');
+          if (triggerHeader) {
+            const triggers = JSON.parse(triggerHeader);
             triggers.forEach(trigger => {
               if (trigger.scope === 'parent' && !parentComponent) {
                 return;
@@ -243,7 +252,10 @@
 
               const scope = trigger.scope === 'parent' ? parentComponent.id : 'global';
               const event = new CustomEvent(`${scope}:${trigger.name}`, {detail: trigger.data});
-              document.dispatchEvent(event);
+
+              setTimeout(() => {
+                document.dispatchEvent(event);
+              }, 0)
             });
           }
         }
@@ -321,15 +333,25 @@ document.addEventListener('alpine:init', () => {
 
   Alpine.directive('hydro-bind', (el, {expression}, {effect, cleanup}) => {
     effect(() => {
-      const event = 'change';
+      const event = expression || "change";
 
       const eventHandler = async (event) => {
         event.preventDefault();
         await window.Hydro.hydroBind(event.target);
       };
+
+      const blurHandler = async (event) => {
+        if (event.target.getAttribute("data-update-on-blur") !== null) {
+          await window.Hydro.hydroBind(event.target);
+          event.target.value = event.target.getAttribute("value");
+        }
+      };
+
       el.addEventListener(event, eventHandler);
+      el.addEventListener("blur", blurHandler);
       cleanup(() => {
         el.removeEventListener(event, eventHandler);
+        el.removeEventListener("blur", blurHandler);
       });
     });
   });

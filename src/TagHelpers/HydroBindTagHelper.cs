@@ -13,12 +13,19 @@ namespace Hydro.TagHelpers;
 public sealed class HydroBindTagHelper : TagHelper
 {
     private const string TagAttribute = "hydro-bind";
+    private const string EventAttribute = "bind-event";
 
     /// <summary>
     /// Bind
     /// </summary>
     [HtmlAttributeName(TagAttribute)]
     public bool Bind { get; set; } = true;
+    
+    /// <summary>
+    /// Bind event
+    /// </summary>
+    [HtmlAttributeName(EventAttribute)]
+    public string BindEvent { get; set; } = "change";
     
     /// <summary>
     /// View context
@@ -42,7 +49,7 @@ public sealed class HydroBindTagHelper : TagHelper
             return;
         }
         
-        output.Attributes.Add(new("x-hydro-bind"));
+        output.Attributes.Add(new("x-hydro-bind", BindEvent));
         output.Attributes.Add(new("x-data"));
     }
 }

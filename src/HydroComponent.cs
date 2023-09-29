@@ -26,6 +26,9 @@ public abstract class HydroComponent : ViewComponent
     private readonly List<HydroComponentEvent> _dispatchEvents = new();
     private readonly HashSet<HydroEventSubscription> _subscriptions = new();
 
+    private static readonly MethodInfo InvokeActionMethod = typeof(HydroComponent).GetMethod(nameof(InvokeAction), BindingFlags.Static | BindingFlags.NonPublic);
+    private static readonly MethodInfo InvokeActionAsyncMethod = typeof(HydroComponent).GetMethod(nameof(InvokeActionAsync), BindingFlags.Static | BindingFlags.NonPublic);
+
     /// <summary>
     /// Provides indication if ModelState is valid
     /// </summary>
@@ -76,11 +79,11 @@ public abstract class HydroComponent : ViewComponent
         {
             EventName = GetFullTypeName(typeof(TEvent)),
             Action = action
-        });
+        });     
 
     private static string GetFullTypeName(Type type) =>
         type.DeclaringType != null
-            ? type.DeclaringType.Name + "+" + type.Name
+            ? type.DeclaringType.Name + "+" + type.Name  
             : type.Name;
 
     /// <summary>
@@ -150,7 +153,22 @@ public abstract class HydroComponent : ViewComponent
     public virtual void Render()
     {
     }
+
+    /// <summary>
+    /// Perform a redirect with page reload
+    /// </summary>
+    /// <param name="url">Destination URL</param>
+    public void Redirect(string url) =>
+        HttpContext.Response.HydroRedirect(url);
     
+    /// <summary>
+    /// Perform a redirect without page reload
+    /// </summary>
+    /// <param name="url">Destination URL</param>
+    /// <param name="payload">Payload for the destination components</param>
+    public void Location(string url, object payload = null) =>
+        HttpContext.Response.HydroLocation(url, payload);
+
     /// <summary>
     /// Cache value
     /// </summary>
@@ -399,6 +417,16 @@ public abstract class HydroComponent : ViewComponent
         HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.Parameters, out var parameters)
             ? JsonConvert.DeserializeObject<Dictionary<string, object>>(parameters)
             : new Dictionary<string, object>();
+    
+    /// <summary>
+    /// Get the payload transferred from previous page's component
+    /// </summary>
+    /// <typeparam name="T">Payload type</typeparam>
+    /// <returns>Payload</returns>
+    public T GetPayload<T>() =>
+        HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.Payload, out var payloadString)
+            ? JsonConvert.DeserializeObject<T>(payloadString)
+            : default;
 
     private async Task TriggerEvent()
     {
@@ -412,17 +440,33 @@ public abstract class HydroComponent : ViewComponent
                 var parameters = methodInfo.GetParameters();
                 var parameterType = parameters.First().ParameterType;
                 var model = HttpContext.Items.TryGetValue(HydroConsts.ContextItems.EventData, out var eventModel) ? JsonConvert.DeserializeObject((string)eventModel, parameterType) : null;
-
-                if (typeof(Task).IsAssignableFrom(methodInfo.ReturnType))
+                
+                var isAsync = typeof(Task).IsAssignableFrom(methodInfo.ReturnType);
+                
+                if (isAsync)
                 {
-                    await (Task)methodInfo.Invoke(this, new[] { model })!;
+                    var method = InvokeActionAsyncMethod.MakeGenericMethod(parameterType);
+                    await (Task)method.Invoke(null, new[] { subscription.Action, model })!;
                 }
                 else
                 {
-                    methodInfo.Invoke(this, new[] { model });
+                    var method = InvokeActionMethod.MakeGenericMethod(parameterType);
+                    method.Invoke(null, new[] { subscription.Action, model });
                 }
             }
         }
+    }
+    
+    private static void InvokeAction<T>(Delegate actionDelegate, T instance)
+    {
+        var action = actionDelegate as Action<T>;
+        action?.Invoke(instance);
+    }
+    
+    private static Task InvokeActionAsync<T>(Delegate actionDelegate, T instance)
+    {
+        var action = actionDelegate as Func<T, Task>;
+        return action!.Invoke(instance);
     }
 
     private void PopulateBaseModel(IPersistentState persistentState)
