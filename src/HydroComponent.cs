@@ -72,6 +72,17 @@ public abstract class HydroComponent : ViewComponent
     /// <summary>
     /// Subscribes to a Hydro event
     /// </summary>
+    /// <typeparam name="TEvent">Event type</typeparam>
+    public void Subscribe<TEvent>() =>
+        _subscriptions.Add(new HydroEventSubscription
+        {
+            EventName = GetFullTypeName(typeof(TEvent)),
+            Action = (TEvent _) => { }
+        });
+    
+    /// <summary>
+    /// Subscribes to a Hydro event
+    /// </summary>
     /// <param name="action">Action to execute when event occurs</param>
     /// <typeparam name="TEvent">Event type</typeparam>
     public void Subscribe<TEvent>(Action<TEvent> action) =>

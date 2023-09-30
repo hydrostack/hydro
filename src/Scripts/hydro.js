@@ -96,7 +96,7 @@
   }
 
   async function hydroBind(el) {
-    if (!el.hasAttribute('x-hydro-bind')) {
+    if (!Array.from(el.attributes).some(attr => attr.name.startsWith('x-hydro-bind'))) {
       return;
     }
 
@@ -132,7 +132,7 @@
   async function hydroAction(el, eventName) {
     const url = el.getAttribute('x-hydro-action');
 
-    if (document.activeElement && document.activeElement.hasAttribute('x-hydro-bind') && isElementDirty(document.activeElement)) {
+    if (document.activeElement && Array.from(document.activeElement.attributes).some(attr => attr.name.startsWith('x-hydro-bind')) && isElementDirty(document.activeElement)) {
       await hydroBind(document.activeElement);
     }
 
@@ -223,7 +223,11 @@
               }
 
               if (from.tagName === "INPUT" && from.type === 'text' && from.value !== to.getAttribute("value")) {
-                to.setAttribute("data-update-on-blur", "");
+                if (document.activeElement !== from) {
+                  from.value = to.value;
+                } else {
+                  to.setAttribute("data-update-on-blur", "");
+                }
               }
 
               counter++;
@@ -331,19 +335,33 @@ document.addEventListener('alpine:init', () => {
     });
   });
 
-  Alpine.directive('hydro-bind', (el, {expression}, {effect, cleanup}) => {
+  Alpine.directive('hydro-bind', (el, {expression, modifiers}, {effect, cleanup}) => {
     effect(() => {
       const event = expression || "change";
 
+      const debounce = modifiers.length === 2 && modifiers[0] === "debounce"
+        ? parseInt(modifiers[1])
+        : 200;
+
+      let timeout = 0;
+      let progress = false;
+
       const eventHandler = async (event) => {
         event.preventDefault();
-        await window.Hydro.hydroBind(event.target);
+
+        progress = true;
+        clearTimeout(timeout);
+
+        timeout = setTimeout(async () => {
+          await window.Hydro.hydroBind(event.target);
+          progress = false;
+        }, debounce);
       };
 
       const blurHandler = async (event) => {
-        if (event.target.getAttribute("data-update-on-blur") !== null) {
+        if (progress || event.target.getAttribute("data-update-on-blur") !== null) {
+          clearTimeout(timeout);
           await window.Hydro.hydroBind(event.target);
-          event.target.value = event.target.getAttribute("value");
         }
       };
 

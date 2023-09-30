@@ -14,12 +14,19 @@ public sealed class HydroBindTagHelper : TagHelper
 {
     private const string TagAttribute = "hydro-bind";
     private const string EventAttribute = "bind-event";
+    private const string DebounceAttribute = "bind-debounce";
 
     /// <summary>
     /// Bind
     /// </summary>
     [HtmlAttributeName(TagAttribute)]
     public bool Bind { get; set; } = true;
+    
+    /// <summary>
+    /// Debounce milliseconds
+    /// </summary>
+    [HtmlAttributeName(DebounceAttribute)]
+    public int? Debounce { get; set; }
     
     /// <summary>
     /// Bind event
@@ -48,8 +55,15 @@ public sealed class HydroBindTagHelper : TagHelper
         {
             return;
         }
+
+        var bindAttributeName = new List<string> { "x-hydro-bind" };
+
+        if (Debounce != null)
+        {
+            bindAttributeName.Add($"debounce.{Debounce}");
+        }
         
-        output.Attributes.Add(new("x-hydro-bind", BindEvent));
+        output.Attributes.Add(new(string.Join(".", bindAttributeName), BindEvent));
         output.Attributes.Add(new("x-data"));
     }
 }

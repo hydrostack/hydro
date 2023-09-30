@@ -4,11 +4,31 @@ outline: deep
 
 # Navigation
 
-There are two way of navigating from Hydro component to another page:
-1. Smooth navigation - changing the location without page reload.
-2. Hard navigation - redirection with page reload.
+There are 3 kinds of managed navigation in applications using Hydro:
+1. Navigation via links.
+2. Navigation initiated in components (without page reload).
+3. Navigation initiated in components (with full page reload).
 
-## Smooth navigation
+## Navigation via links
+
+With `hydro-boost` attribute relative links in your application can be loaded in the background and applied to the current document instead of doing the full page reload.
+
+Examples:
+
+Attribute applied directly on a link:
+```html
+<a href="/page" hydro-boost>My page</a>
+```
+
+Attribute applied directly on a parent of the links:
+```html
+<ul hydro-boost>
+  <li><a href="/page1">My page 1</a></li>
+  <li><a href="/page2">My page 2</a></li>
+</ul>
+```
+
+## Navigation initiated in components (without page reload)
 
 Let's take a look at he following code:
 
@@ -72,7 +92,7 @@ public class CartSummary : HydroComponent
 ```
 
 
-## Hard navigation
+## Navigation initiated in components (with full page reload)
 
 If full page reload is needed, use the `Redirect` method:
 
