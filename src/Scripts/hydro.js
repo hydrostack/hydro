@@ -144,6 +144,10 @@
   }
 
   async function hydroRequest(el, url, contentType, body, type, eventData) {
+    if (!document.contains(el)) {
+      return;
+    }
+    
     const component = el.closest("[hydro]");
     const componentId = component.getAttribute("id");
 
