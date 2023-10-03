@@ -408,7 +408,7 @@ public abstract class HydroComponent : ViewComponent
 
                         return sourceType == p.ParameterType
                             ? requestParameters[p.Name]
-                            : TypeDescriptor.GetConverter(sourceType).ConvertTo(requestParameters[p.Name], p.ParameterType);
+                            : TypeDescriptor.GetConverter(p.ParameterType).ConvertFrom(requestParameters[p.Name]);
                     })
                     .ToArray();
 
