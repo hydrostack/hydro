@@ -330,12 +330,22 @@ public abstract class HydroComponent : ViewComponent
 
         foreach (var pair in formCollection)
         {
-            PropertyInjector.SetPropertyValue(this, pair.Key, pair.Value);
+            var value = PropertyInjector.SetPropertyValue(this, pair.Key, pair.Value);
+            Bind(pair.Key, value);
         }
 
         ValidateModel();
     }
 
+    /// <summary>
+    /// Triggered when a property is updated from the client
+    /// </summary>
+    /// <param name="property">Property path</param>
+    /// <param name="value">New value</param>
+    public virtual void Bind(string property, object value)
+    {
+    }
+    
     private HtmlNode GetModelScript(HtmlDocument document, string id, IPersistentState persistentState)
     {
         var scriptNode = document.CreateElement("script");

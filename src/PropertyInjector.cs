@@ -37,7 +37,7 @@ internal static class PropertyInjector
         return propertyInfos;
     }
 
-    public static void SetPropertyValue(object target, string propertyPath, StringValues value)
+    public static object SetPropertyValue(object target, string propertyPath, StringValues value)
     {
         if (target == null)
         {
@@ -57,7 +57,7 @@ internal static class PropertyInjector
             currentObject = GetObjectOrIndexedValue(currentObject, properties[i]);
         }
 
-        SetValueOnObject(currentObject, properties[^1], value);
+        return SetValueOnObject(currentObject, properties[^1], value);
     }
 
     private static object GetObjectOrIndexedValue(object obj, string propName)
@@ -126,11 +126,11 @@ internal static class PropertyInjector
         return (Convert.ToInt32(iteratorValue), cleanedPropName);
     }
 
-    private static void SetValueOnObject(object obj, string propName, StringValues valueToSet)
+    private static object SetValueOnObject(object obj, string propName, StringValues valueToSet)
     {
         if (obj == null)
         {
-            return;
+            return null;
         }
         
         if (string.IsNullOrWhiteSpace(propName))
@@ -140,21 +140,21 @@ internal static class PropertyInjector
 
         if (propName.Contains('['))
         {
-            SetIndexedValue(obj, propName, valueToSet);
-            return;
+            return SetIndexedValue(obj, propName, valueToSet);
         }
 
         var propertyInfo = obj.GetType().GetProperty(propName);
         if (propertyInfo == null)
         {
-            return;
+            return null;
         }
 
         var convertedValue = ConvertValue(valueToSet, propertyInfo.PropertyType);
         propertyInfo.SetValue(obj, convertedValue);
+        return convertedValue;
     }
 
-    private static void SetIndexedValue(object obj, string propName, StringValues valueToSet)
+    private static object SetIndexedValue(object obj, string propName, StringValues valueToSet)
     {
         var (index, cleanedPropName) = GetIndexAndCleanedPropertyName(propName);
         var propertyInfo = obj.GetType().GetProperty(cleanedPropName);
@@ -189,6 +189,8 @@ internal static class PropertyInjector
         {
             throw new InvalidOperationException($"Indexed access for property '{cleanedPropName}' is not supported.");
         }
+
+        return convertedValue;
     }
 
     private static object ConvertValue(StringValues valueToConvert, Type destinationType)
