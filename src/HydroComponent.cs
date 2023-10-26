@@ -8,8 +8,10 @@ using HtmlAgilityPack;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using Int32Converter = Hydro.Utils.Int32Converter;
 
 namespace Hydro;
 
@@ -21,13 +23,20 @@ public abstract class HydroComponent : ViewComponent
     private string _id;
 
     private readonly ConcurrentDictionary<CacheKey, object> _requestCache = new();
-    private static readonly ConcurrentDictionary<CacheKey, object> PersistantCache = new();
+    private static readonly ConcurrentDictionary<CacheKey, object> PersistentCache = new();
 
     private readonly List<HydroComponentEvent> _dispatchEvents = new();
     private readonly HashSet<HydroEventSubscription> _subscriptions = new();
 
     private static readonly MethodInfo InvokeActionMethod = typeof(HydroComponent).GetMethod(nameof(InvokeAction), BindingFlags.Static | BindingFlags.NonPublic);
     private static readonly MethodInfo InvokeActionAsyncMethod = typeof(HydroComponent).GetMethod(nameof(InvokeActionAsync), BindingFlags.Static | BindingFlags.NonPublic);
+
+    private static readonly JsonSerializerSettings JsonSerializerSettings = new JsonSerializerSettings
+    {
+        Converters = new JsonConverter[] { new Int32Converter() }.ToList()
+    };
+
+    private static readonly ConcurrentDictionary<Type, IHydroAuthorizationFilter[]> ComponentAuthorizationAttributes = new();
 
     /// <summary>
     /// Provides indication if ModelState is valid
@@ -79,7 +88,7 @@ public abstract class HydroComponent : ViewComponent
             EventName = GetFullTypeName(typeof(TEvent)),
             Action = (TEvent _) => { }
         });
-    
+
     /// <summary>
     /// Subscribes to a Hydro event
     /// </summary>
@@ -90,11 +99,11 @@ public abstract class HydroComponent : ViewComponent
         {
             EventName = GetFullTypeName(typeof(TEvent)),
             Action = action
-        });     
+        });
 
     private static string GetFullTypeName(Type type) =>
         type.DeclaringType != null
-            ? type.DeclaringType.Name + "+" + type.Name  
+            ? type.DeclaringType.Name + "+" + type.Name
             : type.Name;
 
     /// <summary>
@@ -171,7 +180,7 @@ public abstract class HydroComponent : ViewComponent
     /// <param name="url">Destination URL</param>
     public void Redirect(string url) =>
         HttpContext.Response.HydroRedirect(url);
-    
+
     /// <summary>
     /// Perform a redirect without page reload
     /// </summary>
@@ -189,7 +198,7 @@ public abstract class HydroComponent : ViewComponent
     /// <returns>Produced value</returns>
     protected Cache<T> Cache<T>(Func<T> func, CacheLifetime lifetime = CacheLifetime.Request)
     {
-        var cache = lifetime == CacheLifetime.Request ? _requestCache : PersistantCache;
+        var cache = lifetime == CacheLifetime.Request ? _requestCache : PersistentCache;
 
         var cacheKey = new CacheKey(_id, func);
         if (cache.TryGetValue(cacheKey, out var dic))
@@ -234,6 +243,11 @@ public abstract class HydroComponent : ViewComponent
 
         PopulateBaseModel(persistentState);
         PopulateRequestModel();
+        if (!await AuthorizeAsync())
+        {
+            return string.Empty;
+        }
+
         await TriggerMethod();
         await TriggerEvent();
         await RenderAsync();
@@ -241,7 +255,7 @@ public abstract class HydroComponent : ViewComponent
 
         return await GenerateComponentHtml(componentId, persistentState);
     }
-    
+
     private async Task<string> RenderOnlineNestedComponent(IPersistentState persistentState)
     {
         var componentId = GenerateComponentId(Key);
@@ -252,18 +266,28 @@ public abstract class HydroComponent : ViewComponent
             return GetComponentPlaceholderTemplate(componentId);
         }
 
+        if (!await AuthorizeAsync())
+        {
+            return string.Empty;
+        }
+
         await MountAsync();
         await RenderAsync();
         return await GenerateComponentHtml(componentId, persistentState);
     }
 
     private static string GetComponentPlaceholderTemplate(string componentId) =>
-        $"<div id=\"{componentId}\" hydro></div>";
+        $"<div id=\"{componentId}\" hydro hydro-placeholder></div>";
 
     private async Task<string> RenderStaticComponent(IPersistentState persistentState)
     {
         var componentId = GenerateComponentId(Key);
         _id = componentId;
+
+        if (!await AuthorizeAsync())
+        {
+            return string.Empty;
+        }
 
         await MountAsync();
         await RenderAsync();
@@ -345,7 +369,7 @@ public abstract class HydroComponent : ViewComponent
     public virtual void Bind(string property, object value)
     {
     }
-    
+
     private HtmlNode GetModelScript(HtmlDocument document, string id, IPersistentState persistentState)
     {
         var scriptNode = document.CreateElement("script");
@@ -436,9 +460,9 @@ public abstract class HydroComponent : ViewComponent
 
     private IDictionary<string, object> GetParameters() =>
         HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.Parameters, out var parameters)
-            ? JsonConvert.DeserializeObject<Dictionary<string, object>>(parameters)
+            ? JsonConvert.DeserializeObject<Dictionary<string, object>>(parameters, JsonSerializerSettings)
             : new Dictionary<string, object>();
-    
+
     /// <summary>
     /// Get the payload transferred from previous page's component
     /// </summary>
@@ -461,9 +485,9 @@ public abstract class HydroComponent : ViewComponent
                 var parameters = methodInfo.GetParameters();
                 var parameterType = parameters.First().ParameterType;
                 var model = HttpContext.Items.TryGetValue(HydroConsts.ContextItems.EventData, out var eventModel) ? JsonConvert.DeserializeObject((string)eventModel, parameterType) : null;
-                
+
                 var isAsync = typeof(Task).IsAssignableFrom(methodInfo.ReturnType);
-                
+
                 if (isAsync)
                 {
                     var method = InvokeActionAsyncMethod.MakeGenericMethod(parameterType);
@@ -477,13 +501,13 @@ public abstract class HydroComponent : ViewComponent
             }
         }
     }
-    
+
     private static void InvokeAction<T>(Delegate actionDelegate, T instance)
     {
         var action = actionDelegate as Action<T>;
         action?.Invoke(instance);
     }
-    
+
     private static Task InvokeActionAsync<T>(Delegate actionDelegate, T instance)
     {
         var action = actionDelegate as Func<T, Task>;
@@ -522,6 +546,7 @@ public abstract class HydroComponent : ViewComponent
         await using var writer = new StringWriter();
         var previousWriter = ViewComponentContext.ViewContext.Writer;
         ViewComponentContext.ViewContext.Writer = writer;
+        ViewComponentContext.ViewContext.CheckBoxHiddenInputRenderMode = CheckBoxHiddenInputRenderMode.None;
 
         var result = View(GetViewPath(), this);
 
@@ -569,12 +594,25 @@ public abstract class HydroComponent : ViewComponent
                 continue;
             }
 
-            if (sourceProperty.PropertyType != targetProperty.PropertyType)
+            object sourceValue;
+
+            if (sourceProperty.PropertyType == targetProperty.PropertyType)
             {
-                throw new InvalidCastException($"Type mismatch in {sourceProperty.Name} parameter.");
+                sourceValue = sourceProperty.GetValue(source);
+            }
+            else
+            {
+                try
+                {
+                    var json = JsonConvert.SerializeObject(sourceProperty.GetValue(source));
+                    sourceValue = JsonConvert.DeserializeObject(json, targetProperty.PropertyType);
+                }
+                catch
+                {
+                    throw new InvalidCastException($"Type mismatch in {sourceProperty.Name} parameter.");
+                }
             }
 
-            var sourceValue = sourceProperty.GetValue(source);
             targetProperty.SetValue(target, sourceValue);
         }
     }
@@ -643,6 +681,34 @@ public abstract class HydroComponent : ViewComponent
                 }
             }
         }
+    }
+
+    private async Task<bool> AuthorizeAsync()
+    {
+        var type = GetType();
+        
+        if (!ComponentAuthorizationAttributes.ContainsKey(type))
+        {
+            ComponentAuthorizationAttributes.TryAdd(type, type.GetCustomAttributes(true)
+                .Where(attr => attr is IHydroAuthorizationFilter)
+                .Cast<IHydroAuthorizationFilter>()
+                .ToArray());
+        }
+        
+        foreach (var authorizationFilter in ComponentAuthorizationAttributes[type])
+        {
+            if (!await authorizationFilter.AuthorizeAsync(HttpContext, this))
+            {
+                if (HttpContext.IsHydro(excludeBoosted: true))
+                {
+                    HttpContext.Response.StatusCode = StatusCodes.Status403Forbidden;
+                }
+                
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static string Hash(string input) =>

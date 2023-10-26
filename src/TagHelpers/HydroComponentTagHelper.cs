@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using JetBrains.Annotations;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
@@ -29,6 +30,7 @@ public sealed class HydroComponentTagHelper : TagHelper
     /// Hydro component's action to execute
     /// </summary>
     [HtmlAttributeName(NameAttribute)]
+    [AspMvcViewComponent]
     public string Name { get; set; }
 
     /// <summary>

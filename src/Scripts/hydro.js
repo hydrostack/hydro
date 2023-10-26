@@ -67,6 +67,7 @@
       promiseFunc()
         .catch(error => {
           console.log(`Error: ${error}`);
+          // throw error;
         })
     );
     return lastPromise;
@@ -118,7 +119,8 @@
       clearTimeout(binding[url].timeout);
     }
 
-    binding[url].formData.set(el.getAttribute('name'), el.value);
+    const value = el.tagName === "INPUT" && el.type === 'checkbox' ? el.checked : el.value;
+    binding[url].formData.set(el.getAttribute('name'), value);
 
     return await new Promise(resolve => {
       binding[url].timeout = setTimeout(async () => {
@@ -147,7 +149,7 @@
     if (!document.contains(el)) {
       return;
     }
-    
+
     const component = el.closest("[hydro]");
     const componentId = component.getAttribute("id");
 
@@ -219,7 +221,9 @@
           Alpine.morph(component, responseData, {
             updating: (from, to, childrenOnly, skip) => {
               if (counter !== 0 && to.getAttribute && to.getAttribute("hydro") !== null && from.getAttribute && from.getAttribute("hydro") !== null) {
-                skip();
+                if (to.getAttribute("hydro-placeholder") !== null) {
+                  skip();
+                }
               }
 
               if (from.tagName === "INPUT" && from.type === 'checkbox') {
@@ -336,6 +340,49 @@ document.addEventListener('alpine:init', () => {
           el.removeEventListener(eventName, eventHandler);
         });
       }
+    });
+  });
+
+  Alpine.directive('hydro-dispatch', (el, {expression}, {effect, cleanup}) => {
+    effect(() => {
+      if (!document.contains(el)) {
+        return;
+      }
+
+      const component = window.Hydro.findComponent(el);
+
+      if (!component) {
+        throw new Error("Cannot find Hydro component");
+      }
+
+      const eventName = el.getAttribute('hydro-event') || 'click';
+
+      if (!component.element.parentElement) {
+        debugger;
+      }
+
+      const parentComponent = window.Hydro.findComponent(component.element.parentElement);
+
+      const trigger = JSON.parse(expression);
+
+      if (trigger.scope === 'parent' && !parentComponent) {
+        return;
+      }
+
+      const scope = trigger.scope === 'parent' ? parentComponent.id : 'global';
+
+      const eventHandler = async (event) => {
+        event.preventDefault();
+        const eventObj = new CustomEvent(`${scope}:${trigger.name}`, {detail: trigger.data});
+
+        setTimeout(() => {
+          document.dispatchEvent(eventObj);
+        }, 0)
+      };
+      el.addEventListener(eventName, eventHandler);
+      cleanup(() => {
+        el.removeEventListener(eventName, eventHandler);
+      });
     });
   });
 

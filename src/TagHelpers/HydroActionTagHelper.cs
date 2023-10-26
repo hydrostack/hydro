@@ -78,7 +78,8 @@ public sealed class HydroActionTagHelper : TagHelper
         }
         
         var methodName = Method.Replace("Model.", string.Empty);
-        output.Attributes.Add("x-hydro-action", $"/hydro/{ViewContext.ViewData.Model.GetType().Name}/{methodName}".ToLower());
+        var modelType = ViewContext.ViewData.ModelMetadata.ContainerType ?? ViewContext.ViewData.Model.GetType();
+        output.Attributes.Add("x-hydro-action", $"/hydro/{modelType.Name}/{methodName}".ToLower());
 
         if (Parameters.Any())
         {
