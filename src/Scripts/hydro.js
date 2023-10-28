@@ -213,6 +213,24 @@
         });
 
         if (!response.ok) {
+          const contentType = response.headers.get("content-type");
+          let eventDetail = {};
+
+          try {
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+              const json = await response.json();
+              eventDetail.message = json?.message || "Unhandled exception";
+              eventDetail.data = json?.data;
+            } else {
+              eventDetail.message = await response.text();
+            }
+          } catch {
+            // ignore
+          }
+
+          setTimeout(() => {
+            document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, {detail: eventDetail}));
+          }, 0);
           throw new Error(`HTTP error! status: ${response.status}`);
         } else {
           const responseData = await response.text();
