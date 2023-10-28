@@ -168,6 +168,14 @@
     if (!eventData && type !== 'bind') {
       elementsToDisable = [el];
 
+      if (el.tagName === "FORM") {
+        const submit = el.querySelector('[type="submit"]');
+
+        if (submit) {
+          elementsToDisable.push(submit);
+        }
+      }
+
       disableTimer = setTimeout(() => {
         elementsToDisable.forEach((elementToDisable) => {
           elementToDisable.disabled = true;
