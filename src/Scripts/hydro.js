@@ -89,11 +89,12 @@
 
   let binding = {};
 
-  async function hydroEvent(el, url, requestModel) {
-    const body = JSON.stringify(requestModel);
+  async function hydroEvent(el, url, eventData) {
+    const dispatchId = eventData.dispatchId;
+    const body = JSON.stringify(eventData.data);
     const hydroEvent = el.getAttribute("x-on-hydro-event");
     const wireEventData = JSON.parse(hydroEvent);
-    await hydroRequest(el, url, 'application/json', body, null, wireEventData);
+    await hydroRequest(el, url, 'application/json', body, null, wireEventData, dispatchId);
   }
 
   async function hydroBind(el) {
@@ -145,7 +146,7 @@
     await hydroRequest(el, url, null, formData);
   }
 
-  async function hydroRequest(el, url, contentType, body, type, eventData) {
+  async function hydroRequest(el, url, contentType, body, type, eventData, dispatchId) {
     if (!document.contains(el)) {
       return;
     }
@@ -158,15 +159,21 @@
     }
 
     const parentComponent = findComponent(component.parentElement);
+    const dispatchingElement = dispatchId && document.querySelector(`[hydro-dispatch-id="${dispatchId}"]`);
 
-    const classTimeout = setTimeout(() => el.classList.add('hydro-request'), 200);
+    const classTimeout = setTimeout(() => {
+      el.classList.add('hydro-request');
+      if (dispatchingElement) {
+        dispatchingElement.classList.add('hydro-request');
+      }
+    }, 200);
 
     let elementsToDisable = [];
 
     let disableTimer = null;
 
-    if (!eventData && type !== 'bind') {
-      elementsToDisable = [el];
+    if ((!eventData || dispatchId) && type !== 'bind') {
+      elementsToDisable = dispatchId ? [dispatchingElement] : [el];
 
       if (el.tagName === "FORM") {
         const submit = el.querySelector('[type="submit"]');
@@ -237,7 +244,7 @@
           }
 
           setTimeout(() => {
-            document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, {detail: eventDetail}));
+            document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, {detail: {data: eventDetail}}));
           }, 0);
           throw new Error(`HTTP error! status: ${response.status}`);
         } else {
@@ -289,7 +296,7 @@
               }
 
               const scope = trigger.scope === 'parent' ? parentComponent.id : 'global';
-              const event = new CustomEvent(`${scope}:${trigger.name}`, {detail: trigger.data});
+              const event = new CustomEvent(`${scope}:${trigger.name}`, {detail: {data: trigger.data}});
 
               setTimeout(() => {
                 document.dispatchEvent(event);
@@ -298,15 +305,17 @@
           }
         }
       } finally {
-        if (!eventData) {
-          clearTimeout(classTimeout);
-          clearTimeout(disableTimer);
-          el.classList.remove('hydro-request');
-
-          elementsToDisable.forEach((elementToDisable) => {
-            elementToDisable.disabled = false;
-          });
+        clearTimeout(classTimeout);
+        el.classList.remove('hydro-request');
+        if (dispatchingElement) {
+          dispatchingElement.classList.remove('hydro-request');
         }
+
+        clearTimeout(disableTimer);
+
+        elementsToDisable.forEach((elementToDisable) => {
+          elementToDisable.disabled = false;
+        });
       }
     });
   }
@@ -359,6 +368,9 @@ document.addEventListener('alpine:init', () => {
       } else {
         const eventHandler = async (event) => {
           event.preventDefault();
+          if (el.disabled) {
+            return;
+          }
           setTimeout(() => window.Hydro.hydroAction(el, eventName), delay || 0)
         };
         el.addEventListener(eventName, eventHandler);
@@ -398,8 +410,13 @@ document.addEventListener('alpine:init', () => {
       const scope = trigger.scope === 'parent' ? parentComponent.id : 'global';
 
       const eventHandler = async (event) => {
+        if (el.disabled) {
+          return;
+        }
+        
         event.preventDefault();
-        const eventObj = new CustomEvent(`${scope}:${trigger.name}`, {detail: trigger.data});
+        const eventObj = new CustomEvent(`${scope}:${trigger.name}`, {detail: {data: trigger.data, dispatchId: trigger.dispatchId}});
+        el.setAttribute("hydro-dispatch-id", trigger.dispatchId);
 
         setTimeout(() => {
           document.dispatchEvent(eventObj);
