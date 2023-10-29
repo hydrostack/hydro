@@ -25,7 +25,7 @@ public class Toasts : HydroComponent
     private void Handle(UnhandledHydroError data) =>
         ToastsList.Add(new Toast(
             Id: Guid.NewGuid().ToString("N"),
-            Message: data.Message ?? "Unhand",
+            Message: data.Message,
             Type: ToastType.Error
         ));
 
