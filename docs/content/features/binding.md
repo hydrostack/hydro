@@ -44,3 +44,20 @@ By default, all the events are debounced with 200ms. To change it, use `bind-deb
 ```razor
 <input asp-for="Search" hydro-bind bind-event="input" bind-debounce="500" />
 ```
+
+## Handling `bind` event in a component
+
+In order to inject custom logic after `bind` is executed, override the `Bind` method in your Hydro component:
+
+```c#
+public string Name { get; set; }
+
+public override void Bind(string property, object value)
+{
+    if (property == nameof(Name))
+    {
+        var newValue = (string)value;
+        // your logic    
+    }
+}
+```

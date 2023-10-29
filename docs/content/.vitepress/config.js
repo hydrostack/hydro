@@ -28,7 +28,9 @@ export default defineConfig({
           { text: 'Actions', link: '/features/actions' },
           { text: 'Events', link: '/features/events' },
           { text: 'Navigation', link: '/features/navigation' },
+          { text: 'Authorization', link: '/features/authorization' },
           { text: 'Form validation', link: '/features/form-validation' },
+          { text: 'Errors handling', link: '/features/errors-handling' },
           { text: 'Anti-forgery token', link: '/features/xsrf-token' },
           { text: 'User interface utilities', link: '/features/ui-utils' },
         ]
