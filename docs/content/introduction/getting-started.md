@@ -61,12 +61,12 @@ In layout's `head` tag:
 <!-- meta -->
 <meta name="hydro-config" />
 
+<!-- Hydro script -->
+<script src="~/hydro.js" asp-append-version="true"></script>
+
 <!-- Alpine.js libraries -->
 <script defer src="https://cdn.jsdelivr.net/npm/@@alpinejs/morph@3.x.x/dist/cdn.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-~~~~
-<!-- Hydro script -->
-<script src="~/hydro.js" asp-append-version="true"></script>
 ```
 
 For Alpine.js you can use CDN as shown above or you can host it yourself.
