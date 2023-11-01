@@ -124,6 +124,10 @@ await Component.InvokeAsync("Counter")
 
 And voilà! You can test your component by clicking on the `Add` button.
 
+## Apps using Hydro
+- [Moneybow](https://www.moneybow.app/)
+- ...
+
 ## License
 
 Hydro is Copyright © Krzysztof Jeske and other contributors under the [MIT license](https://raw.githubusercontent.com/hydrostack/hydro/main/LICENSE)
