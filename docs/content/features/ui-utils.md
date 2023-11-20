@@ -10,7 +10,7 @@ outline: deep
 CSS class added to elements that triggered a Hydro operation and is currently being processed
 
 ### `.hydro-loading`
-CSS class added to `body` element when a page is loading using boost functionality
+CSS class added to `body` element when a page is loading using hydro-link functionality
 
 ### `disabled`
 Attribute added to elements that triggered a Hydro operation and is currently being processed

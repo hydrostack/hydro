@@ -13,7 +13,7 @@ internal class Int32Converter : JsonConverter
             : serializer.Deserialize(reader);
 
     public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer) =>
-        throw new NotImplementedException();
+        throw new InvalidOperationException();
     
     public override bool CanWrite => false;
 }

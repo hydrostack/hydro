@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Razor.TagHelpers;
+﻿using Microsoft.AspNetCore.Razor.TagHelpers;
 
 namespace Hydro.TagHelpers;
 
@@ -6,15 +6,15 @@ namespace Hydro.TagHelpers;
 /// Provides a mechanism to load the target url in the background and witch the body content when ready
 /// </summary>
 [HtmlTargetElement("*", Attributes = TagAttribute)]
-public sealed class HydroBoostTagHelper : TagHelper
+public sealed class HydroLinkTagHelper : TagHelper
 {
-    private const string TagAttribute = "hydro-boost";
+    private const string TagAttribute = "hydro-link";
 
     /// <summary>
     /// Attribute that triggers the boost behavior
     /// </summary>
     [HtmlAttributeName(TagAttribute)]
-    public bool Boost { get; set; } = true;
+    public bool Link { get; set; } = true;
     
     /// <summary>
     /// Processes the tag helper
@@ -24,8 +24,8 @@ public sealed class HydroBoostTagHelper : TagHelper
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(output);
 
-        output.Attributes.RemoveAll("hydro-boost");
-        output.Attributes.Add("x-data", "");
-        output.Attributes.Add("x-hydro-link", "");
+        output.Attributes.RemoveAll("hydro-link");
+        output.Attributes.Add(new("x-data"));
+        output.Attributes.Add(new("x-hydro-link"));
     }
 }

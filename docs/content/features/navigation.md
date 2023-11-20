@@ -11,18 +11,18 @@ There are 3 kinds of managed navigation in applications using Hydro:
 
 ## Navigation via links
 
-With `hydro-boost` attribute relative links in your application can be loaded in the background and applied to the current document instead of doing the full page reload.
+With `hydro-link` attribute relative links in your application can be loaded in the background and applied to the current document instead of doing the full page reload.
 
 Examples:
 
 Attribute applied directly on a link:
 ```html
-<a href="/page" hydro-boost>My page</a>
+<a href="/page" hydro-link>My page</a>
 ```
 
 Attribute applied directly on a parent of the links:
 ```html
-<ul hydro-boost>
+<ul hydro-link>
   <li><a href="/page1">My page 1</a></li>
   <li><a href="/page2">My page 2</a></li>
 </ul>

@@ -63,8 +63,7 @@ public sealed class HydroDispatchTagHelper : TagHelper
         {
             name = GetFullTypeName(Data.GetType()),
             data = Data,
-            scope = Scope,
-            dispatchId = Guid.NewGuid().ToString("N")
+            scope = Scope
         };
         
         output.Attributes.Add(new(

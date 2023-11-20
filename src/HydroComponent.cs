@@ -20,7 +20,7 @@ namespace Hydro;
 /// </summary>
 public abstract class HydroComponent : ViewComponent
 {
-    private string _id;
+    private string _componentId;
 
     private readonly ConcurrentDictionary<CacheKey, object> _requestCache = new();
     private static readonly ConcurrentDictionary<CacheKey, object> PersistentCache = new();
@@ -31,7 +31,7 @@ public abstract class HydroComponent : ViewComponent
     private static readonly MethodInfo InvokeActionMethod = typeof(HydroComponent).GetMethod(nameof(InvokeAction), BindingFlags.Static | BindingFlags.NonPublic);
     private static readonly MethodInfo InvokeActionAsyncMethod = typeof(HydroComponent).GetMethod(nameof(InvokeActionAsync), BindingFlags.Static | BindingFlags.NonPublic);
 
-    private static readonly JsonSerializerSettings JsonSerializerSettings = new JsonSerializerSettings
+    private static readonly JsonSerializerSettings JsonSerializerSettings = new()
     {
         Converters = new JsonConverter[] { new Int32Converter() }.ToList()
     };
@@ -123,9 +123,10 @@ public abstract class HydroComponent : ViewComponent
     /// </summary>
     /// <param name="data">Data to pass</param>
     /// <param name="scope">Scope of the event</param>
+    /// <param name="asynchronous">Do not chain the execution of handlers and run them separately</param>
     /// <typeparam name="TEvent">Event type</typeparam>
-    public void Dispatch<TEvent>(TEvent data, Scope scope = Scope.Parent) =>
-        Dispatch(GetFullTypeName(typeof(TEvent)), data, scope);
+    public void Dispatch<TEvent>(TEvent data, Scope scope = Scope.Parent, bool asynchronous = false) =>
+        Dispatch(GetFullTypeName(typeof(TEvent)), data, scope, asynchronous);
 
     /// <summary>
     /// Triggers a Hydro event
@@ -133,14 +134,22 @@ public abstract class HydroComponent : ViewComponent
     /// <param name="name">Name of the event</param>
     /// <param name="data">Data to pass</param>
     /// <param name="scope">Scope of the event</param>
+    /// <param name="asynchronous">Do not chain the execution of handlers and run them separately</param>
     /// <typeparam name="TEvent">Event type</typeparam>
-    public void Dispatch<TEvent>(string name, TEvent data, Scope scope = Scope.Parent) =>
+    public void Dispatch<TEvent>(string name, TEvent data, Scope scope = Scope.Parent, bool asynchronous = false)
+    {
+        var operationId = !asynchronous && HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.OperationId, out var incomingOperationId)
+            ? incomingOperationId.First()
+            : Guid.NewGuid().ToString("N");
+        
         _dispatchEvents.Add(new HydroComponentEvent
         {
             Name = name,
             Data = data,
-            Scope = scope.ToString().ToLower()
+            Scope = scope.ToString().ToLower(),
+            OperationId = operationId
         });
+    }
 
     /// <summary>
     /// Triggered once the component is mounted
@@ -200,7 +209,7 @@ public abstract class HydroComponent : ViewComponent
     {
         var cache = lifetime == CacheLifetime.Request ? _requestCache : PersistentCache;
 
-        var cacheKey = new CacheKey(_id, func);
+        var cacheKey = new CacheKey(_componentId, func);
         if (cache.TryGetValue(cacheKey, out var dic))
         {
             var value = (Cache<T>)dic;
@@ -239,7 +248,7 @@ public abstract class HydroComponent : ViewComponent
     private async Task<string> RenderOnlineRootComponent(IPersistentState persistentState)
     {
         var componentId = GetRootComponentId();
-        _id = componentId;
+        _componentId = componentId;
 
         PopulateBaseModel(persistentState);
         PopulateRequestModel();
@@ -259,7 +268,7 @@ public abstract class HydroComponent : ViewComponent
     private async Task<string> RenderOnlineNestedComponent(IPersistentState persistentState)
     {
         var componentId = GenerateComponentId(Key);
-        _id = componentId;
+        _componentId = componentId;
 
         if (IsComponentIdRendered(componentId))
         {
@@ -282,7 +291,7 @@ public abstract class HydroComponent : ViewComponent
     private async Task<string> RenderStaticComponent(IPersistentState persistentState)
     {
         var componentId = GenerateComponentId(Key);
-        _id = componentId;
+        _componentId = componentId;
 
         if (!await AuthorizeAsync())
         {
@@ -406,7 +415,7 @@ public abstract class HydroComponent : ViewComponent
         }
 
         var data = _dispatchEvents
-            .Select(e => new { name = e.Name, data = e.Data, scope = e.Scope })
+            .Select(e => new { name = e.Name, data = e.Data, scope = e.Scope, operationId = e.OperationId })
             .ToList();
 
         HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.Trigger, JsonConvert.SerializeObject(data));
@@ -420,41 +429,53 @@ public abstract class HydroComponent : ViewComponent
 
     private async Task TriggerMethod()
     {
-        if (HttpContext.Items.TryGetValue(HydroConsts.ContextItems.MethodName, out var method) && method is string methodValue && !string.IsNullOrWhiteSpace(methodValue))
+        if (!HttpContext.Items.TryGetValue(HydroConsts.ContextItems.MethodName, out var method)
+            || method is not string methodValue || string.IsNullOrWhiteSpace(methodValue))
         {
-            var methodInfo = GetType()
-                .GetMethod(methodValue, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            return;
+        }
 
-            if (methodInfo != null)
+        var methodInfo = GetType()
+            .GetMethod(methodValue, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+
+        if (methodInfo == null)
+        {
+            return;
+        }
+
+        var requestParameters = GetParameters();
+        var methodParameters = methodInfo.GetParameters();
+
+        if (requestParameters.Count != methodParameters.Length
+            || requestParameters.Any(rp => !methodParameters.Any(mp => rp.Key == mp.Name)))
+        {
+            throw new InvalidOperationException("Wrong action parameters");
+        }
+        
+        var operationId = HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.OperationId, out var incomingOperationId)
+            ? incomingOperationId.First()
+            : Guid.NewGuid().ToString("N");
+
+        HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.OperationId, operationId);
+
+        var orderedParameters = methodParameters
+            .Select(p =>
             {
-                var requestParameters = GetParameters();
-                var methodParameters = methodInfo.GetParameters();
+                var sourceType = requestParameters[p.Name!].GetType();
 
-                if (requestParameters.Count != methodParameters.Length || requestParameters.Any(rp => !methodParameters.Any(mp => rp.Key == mp.Name)))
-                {
-                    throw new InvalidOperationException("Wrong action parameters");
-                }
+                return sourceType == p.ParameterType
+                    ? requestParameters[p.Name]
+                    : TypeDescriptor.GetConverter(p.ParameterType).ConvertFrom(requestParameters[p.Name]);
+            })
+            .ToArray();
 
-                var orderedParameters = methodParameters
-                    .Select(p =>
-                    {
-                        var sourceType = requestParameters[p.Name].GetType();
-
-                        return sourceType == p.ParameterType
-                            ? requestParameters[p.Name]
-                            : TypeDescriptor.GetConverter(p.ParameterType).ConvertFrom(requestParameters[p.Name]);
-                    })
-                    .ToArray();
-
-                if (typeof(Task).IsAssignableFrom(methodInfo.ReturnType))
-                {
-                    await (Task)methodInfo.Invoke(this, orderedParameters)!;
-                }
-                else
-                {
-                    methodInfo.Invoke(this, orderedParameters);
-                }
-            }
+        if (typeof(Task).IsAssignableFrom(methodInfo.ReturnType))
+        {
+            await (Task)methodInfo.Invoke(this, orderedParameters)!;
+        }
+        else
+        {
+            methodInfo.Invoke(this, orderedParameters);
         }
     }
 
@@ -475,30 +496,43 @@ public abstract class HydroComponent : ViewComponent
 
     private async Task TriggerEvent()
     {
-        if (HttpContext.Items.TryGetValue(HydroConsts.ContextItems.EventName, out var eventName) && eventName is string eventNameValue && !string.IsNullOrWhiteSpace(eventNameValue))
+        if (!HttpContext.Items.TryGetValue(HydroConsts.ContextItems.EventName, out var eventName)
+            || eventName is not string eventNameValue || string.IsNullOrWhiteSpace(eventNameValue))
         {
-            var subscription = _subscriptions.FirstOrDefault(s => s.EventName == eventNameValue);
+            return;
+        }
 
-            if (subscription != null)
-            {
-                var methodInfo = subscription.Action.Method;
-                var parameters = methodInfo.GetParameters();
-                var parameterType = parameters.First().ParameterType;
-                var model = HttpContext.Items.TryGetValue(HydroConsts.ContextItems.EventData, out var eventModel) ? JsonConvert.DeserializeObject((string)eventModel, parameterType) : null;
+        var subscription = _subscriptions.FirstOrDefault(s => s.EventName == eventNameValue);
 
-                var isAsync = typeof(Task).IsAssignableFrom(methodInfo.ReturnType);
+        if (subscription == null)
+        {
+            return;
+        }
 
-                if (isAsync)
-                {
-                    var method = InvokeActionAsyncMethod.MakeGenericMethod(parameterType);
-                    await (Task)method.Invoke(null, new[] { subscription.Action, model })!;
-                }
-                else
-                {
-                    var method = InvokeActionMethod.MakeGenericMethod(parameterType);
-                    method.Invoke(null, new[] { subscription.Action, model });
-                }
-            }
+        var methodInfo = subscription.Action.Method;
+        var parameters = methodInfo.GetParameters();
+        var parameterType = parameters.First().ParameterType;
+        var model = HttpContext.Items.TryGetValue(HydroConsts.ContextItems.EventData, out var eventModel)
+            ? JsonConvert.DeserializeObject((string)eventModel!, parameterType)
+            : null;
+
+        var operationId = HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.OperationId, out var incomingOperationId)
+            ? incomingOperationId.First()
+            : Guid.NewGuid().ToString("N");
+        
+        HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.OperationId, operationId);
+
+        var isAsync = typeof(Task).IsAssignableFrom(methodInfo.ReturnType);
+
+        if (isAsync)
+        {
+            var method = InvokeActionAsyncMethod.MakeGenericMethod(parameterType);
+            await (Task)method.Invoke(null, new[] { subscription.Action, model })!;
+        }
+        else
+        {
+            var method = InvokeActionMethod.MakeGenericMethod(parameterType);
+            method.Invoke(null, new[] { subscription.Action, model });
         }
     }
 
@@ -538,7 +572,7 @@ public abstract class HydroComponent : ViewComponent
     {
         var type = GetType();
         var assemblyName = type.Assembly.GetName().Name;
-        return $"{type.FullName.Replace(assemblyName, "~").Replace(".", "/")}.cshtml";
+        return $"{type.FullName!.Replace(assemblyName!, "~").Replace(".", "/")}.cshtml";
     }
 
     private async Task<string> GetComponentHtml()
@@ -659,7 +693,7 @@ public abstract class HydroComponent : ViewComponent
             {
                 if (IsModelTouched || TouchedProperties.Contains(memberName))
                 {
-                    ModelState.AddModelError(memberName, validationResult.ErrorMessage);
+                    ModelState.AddModelError(memberName, validationResult.ErrorMessage!);
                 }
             }
         }
@@ -686,7 +720,7 @@ public abstract class HydroComponent : ViewComponent
     private async Task<bool> AuthorizeAsync()
     {
         var type = GetType();
-        
+
         if (!ComponentAuthorizationAttributes.ContainsKey(type))
         {
             ComponentAuthorizationAttributes.TryAdd(type, type.GetCustomAttributes(true)
@@ -694,7 +728,7 @@ public abstract class HydroComponent : ViewComponent
                 .Cast<IHydroAuthorizationFilter>()
                 .ToArray());
         }
-        
+
         foreach (var authorizationFilter in ComponentAuthorizationAttributes[type])
         {
             if (!await authorizationFilter.AuthorizeAsync(HttpContext, this))
@@ -703,7 +737,7 @@ public abstract class HydroComponent : ViewComponent
                 {
                     HttpContext.Response.StatusCode = StatusCodes.Status403Forbidden;
                 }
-                
+
                 return false;
             }
         }

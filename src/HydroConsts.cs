@@ -9,6 +9,7 @@ internal static class HydroConsts
         public const string Boosted = "Hydro-Boosted";
         public const string Hydro = "Hydro-Request";
         public const string Parameters = "Hydro-Parameters";
+        public const string OperationId = "Hydro-Operation-Id";
         public const string Payload = "Hydro-Payload";
         public const string RenderedComponentIds = "hydro-all-ids";
     }
@@ -16,6 +17,7 @@ internal static class HydroConsts
     public static class ResponseHeaders
     {
         public const string Trigger = "Hydro-Trigger";
+        public const string OperationId = "Hydro-Operation-Id";
     }
 
     public static class ContextItems

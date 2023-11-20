@@ -70,7 +70,14 @@
           // throw error;
         })
     );
-    return lastPromise;
+    return promiseChain[key];
+  }
+
+  function generateGuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
   }
 
   function findComponent(el) {
@@ -90,11 +97,11 @@
   let binding = {};
 
   async function hydroEvent(el, url, eventData) {
-    const dispatchId = eventData.dispatchId;
+    const operationId = eventData.operationId;
     const body = JSON.stringify(eventData.data);
     const hydroEvent = el.getAttribute("x-on-hydro-event");
     const wireEventData = JSON.parse(hydroEvent);
-    await hydroRequest(el, url, 'application/json', body, null, wireEventData, dispatchId);
+    await hydroRequest(el, url, 'application/json', body, null, wireEventData, operationId);
   }
 
   async function hydroBind(el) {
@@ -143,10 +150,15 @@
       ? new FormData(el.closest("form"))
       : null;
 
-    await hydroRequest(el, url, null, formData);
+    const operationId = generateGuid();
+    el.setAttribute("hydro-operation-id", operationId);
+
+    await hydroRequest(el, url, null, formData, null, null, operationId);
   }
 
-  async function hydroRequest(el, url, contentType, body, type, eventData, dispatchId) {
+  let operationStatus = {};
+
+  async function hydroRequest(el, url, contentType, body, type, eventData, operationId) {
     if (!document.contains(el)) {
       return;
     }
@@ -159,38 +171,26 @@
     }
 
     const parentComponent = findComponent(component.parentElement);
-    const dispatchingElement = dispatchId && document.querySelector(`[hydro-dispatch-id="${dispatchId}"]`);
 
-    const classTimeout = setTimeout(() => {
-      el.classList.add('hydro-request');
-      if (dispatchingElement) {
-        dispatchingElement.classList.add('hydro-request');
-      }
-    }, 200);
+    let disableTimer;
+    let classTimeout;
 
-    let elementsToDisable = [];
+    if (operationId) {
+      if (!operationStatus[operationId]) {
+        operationStatus[operationId] = 0;
 
-    let disableTimer = null;
+        const operationTrigger = document.querySelector(`[hydro-operation-id="${operationId}"]`);
 
-    if ((!eventData || dispatchId) && type !== 'bind') {
-      elementsToDisable = dispatchId ? [dispatchingElement] : [el];
-
-      if (el.tagName === "FORM") {
-        const submit = el.querySelector('[type="submit"]');
-
-        if (submit) {
-          elementsToDisable.push(submit);
+        if (operationTrigger) {
+          classTimeout = setTimeout(() => operationTrigger.classList.add('hydro-request'), 200);
+          disableTimer = setTimeout(() => operationTrigger.disabled = true, 200);
         }
       }
 
-      disableTimer = setTimeout(() => {
-        elementsToDisable.forEach((elementToDisable) => {
-          elementToDisable.disabled = true;
-        });
-      }, 200);
+      operationStatus[operationId]++;
     }
 
-    await enqueueHydroPromise('', async () => {
+    await enqueueHydroPromise(componentId, async () => {
       try {
         let headers = {
           'Hydro-Request': 'true'
@@ -221,6 +221,10 @@
           headers['Hydro-Parameters'] = parameters;
         }
 
+        if (operationId) {
+          headers['Hydro-Operation-Id'] = operationId;
+        }
+
         const response = await fetch(url, {
           method: 'POST',
           body: body,
@@ -243,9 +247,7 @@
             // ignore
           }
 
-          setTimeout(() => {
-            document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, {detail: {data: eventDetail}}));
-          }, 0);
+          document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, {detail: {data: eventDetail}}));
           throw new Error(`HTTP error! status: ${response.status}`);
         } else {
           const responseData = await response.text();
@@ -256,6 +258,14 @@
               if (counter !== 0 && to.getAttribute && to.getAttribute("hydro") !== null && from.getAttribute && from.getAttribute("hydro") !== null) {
                 if (to.getAttribute("hydro-placeholder") !== null) {
                   skip();
+                }
+              }
+
+              if (from.getAttribute && from.getAttribute("hydro-operation-id")) {
+                to.setAttribute("hydro-operation-id", from.getAttribute("hydro-operation-id"));
+                to.disabled = from.disabled;
+                if (from.classList.contains('hydro-request')) {
+                  to.classList.add('hydro-request');
                 }
               }
 
@@ -287,35 +297,45 @@
             window.location.href = redirectHeader;
           }
 
-          const triggerHeader = response.headers.get('Hydro-Trigger');
-          if (triggerHeader) {
-            const triggers = JSON.parse(triggerHeader);
-            triggers.forEach(trigger => {
-              if (trigger.scope === 'parent' && !parentComponent) {
-                return;
-              }
 
-              const scope = trigger.scope === 'parent' ? parentComponent.id : 'global';
-              const event = new CustomEvent(`${scope}:${trigger.name}`, {detail: {data: trigger.data}});
+          setTimeout(() => { // make sure the event handlers got registered
+            const triggerHeader = response.headers.get('Hydro-Trigger');
+            if (triggerHeader) {
+              const triggers = JSON.parse(triggerHeader);
+              triggers.forEach(trigger => {
+                if (trigger.scope === 'parent' && !parentComponent) {
+                  return;
+                }
 
-              setTimeout(() => {
-                document.dispatchEvent(event);
-              }, 0)
-            });
-          }
+                const eventScope = trigger.scope === 'parent' ? parentComponent.id : 'global';
+                const eventName = `${eventScope}:${trigger.name}`;
+                const eventData = {
+                  detail: {
+                    data: trigger.data,
+                    operationId: trigger.operationId
+                  }
+                };
+
+                document.dispatchEvent(new CustomEvent(eventName, eventData));
+              });
+            }
+          });
         }
       } finally {
-        clearTimeout(classTimeout);
-        el.classList.remove('hydro-request');
-        if (dispatchingElement) {
-          dispatchingElement.classList.remove('hydro-request');
-        }
+        setTimeout(() => {
+          clearTimeout(classTimeout);
+          clearTimeout(disableTimer);
 
-        clearTimeout(disableTimer);
+          if (operationId) {
+            const operationTrigger = document.querySelector(`[hydro-operation-id="${operationId}"]`);
+            operationStatus[operationId]--;
 
-        elementsToDisable.forEach((elementToDisable) => {
-          elementToDisable.disabled = false;
-        });
+            if (operationTrigger && operationStatus[operationId] <= 0) {
+              operationTrigger.disabled = false;
+              operationTrigger.classList.remove('hydro-request');
+            }
+          }
+        }, 20); // make sure it's delayed more than 0 and less than 50
       }
     });
   }
@@ -349,6 +369,7 @@
     hydroAction,
     loadPageContent,
     findComponent,
+    generateGuid,
     config
   };
 }
@@ -371,6 +392,7 @@ document.addEventListener('alpine:init', () => {
           if (el.disabled) {
             return;
           }
+
           setTimeout(() => window.Hydro.hydroAction(el, eventName), delay || 0)
         };
         el.addEventListener(eventName, eventHandler);
@@ -413,14 +435,21 @@ document.addEventListener('alpine:init', () => {
         if (el.disabled) {
           return;
         }
-        
-        event.preventDefault();
-        const eventObj = new CustomEvent(`${scope}:${trigger.name}`, {detail: {data: trigger.data, dispatchId: trigger.dispatchId}});
-        el.setAttribute("hydro-dispatch-id", trigger.dispatchId);
 
-        setTimeout(() => {
-          document.dispatchEvent(eventObj);
-        }, 0)
+        event.preventDefault();
+
+        const operationId = window.Hydro.generateGuid();
+        el.setAttribute("hydro-operation-id", operationId);
+
+        const eventName = `${scope}:${trigger.name}`;
+        const eventData = {
+          detail: {
+            data: trigger.data,
+            operationId
+          }
+        };
+
+        document.dispatchEvent(new CustomEvent(eventName, eventData));
       };
       el.addEventListener(eventName, eventHandler);
       cleanup(() => {
@@ -498,7 +527,7 @@ document.addEventListener('alpine:init', () => {
 
   let currentBoostUrl;
 
-  Alpine.directive('boost', (el, {expression}, {effect, cleanup}) => {
+  Alpine.directive('hydro-link', (el, {expression}, {effect, cleanup}) => {
     effect(() => {
       const handleClick = async (event) => {
         event.preventDefault();
