@@ -18,6 +18,7 @@ internal static class HydroConsts
     {
         public const string Trigger = "Hydro-Trigger";
         public const string OperationId = "Hydro-Operation-Id";
+        public const string SkipOutput = "Hydro-Skip-Output";
     }
 
     public static class ContextItems

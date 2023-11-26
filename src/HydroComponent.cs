@@ -21,6 +21,7 @@ namespace Hydro;
 public abstract class HydroComponent : ViewComponent
 {
     private string _componentId;
+    private bool _skipOutput = false;
 
     private readonly ConcurrentDictionary<CacheKey, object> _requestCache = new();
     private static readonly ConcurrentDictionary<CacheKey, object> PersistentCache = new();
@@ -259,10 +260,17 @@ public abstract class HydroComponent : ViewComponent
 
         await TriggerMethod();
         await TriggerEvent();
-        await RenderAsync();
+
+        if (!_skipOutput)
+        {
+            await RenderAsync();
+        }
+
         PopulateDispatchers();
 
-        return await GenerateComponentHtml(componentId, persistentState);
+        return !_skipOutput 
+            ? await GenerateComponentHtml(componentId, persistentState) 
+            : string.Empty;
     }
 
     private async Task<string> RenderOnlineNestedComponent(IPersistentState persistentState)
@@ -445,11 +453,18 @@ public abstract class HydroComponent : ViewComponent
 
         var requestParameters = GetParameters();
         var methodParameters = methodInfo.GetParameters();
+        var methodAttributes = methodInfo.GetCustomAttributes();
 
         if (requestParameters.Count != methodParameters.Length
             || requestParameters.Any(rp => !methodParameters.Any(mp => rp.Key == mp.Name)))
         {
             throw new InvalidOperationException("Wrong action parameters");
+        }
+
+        if (methodAttributes.Any(a => a.GetType() == typeof(SkipOutputAttribute)))
+        {
+            _skipOutput = true;
+            HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.SkipOutput, "True");
         }
         
         var operationId = HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.OperationId, out var incomingOperationId)

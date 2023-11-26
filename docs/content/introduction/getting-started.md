@@ -26,7 +26,7 @@ builder.Services.AddHydro();
 app.UseHydro(builder.Environment);
 ```
 
-> **_NOTE:_** Make sure that `UseHydro` is called after `UseRouting`.
+> **_NOTE:_** Make sure that `UseHydro` is called after `UseStaticFiles` and `UseRouting`, which are required.
 > 
 Sample Program.cs file:
 
@@ -36,16 +36,14 @@ using Hydro.Configuration;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
-builder.Services.AddHydro(); // for Hydro
+builder.Services.AddHydro(); // Hydro
 
 var app = builder.Build();
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-app.UseAuthorization();
 app.MapRazorPages();
-app.UseHydro(builder.Environment); // for Hydro
+app.UseHydro(builder.Environment); // Hydro
 
 app.Run();
 ```

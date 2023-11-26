@@ -153,12 +153,12 @@
     const operationId = generateGuid();
     el.setAttribute("hydro-operation-id", operationId);
 
-    await hydroRequest(el, url, null, formData, null, null, operationId);
+    await hydroRequest(el, url, null, formData, null, null, operationId, true);
   }
 
   let operationStatus = {};
 
-  async function hydroRequest(el, url, contentType, body, type, eventData, operationId) {
+  async function hydroRequest(el, url, contentType, body, type, eventData, operationId, morphActiveElement) {
     if (!document.contains(el)) {
       return;
     }
@@ -250,40 +250,44 @@
           document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, {detail: {data: eventDetail}}));
           throw new Error(`HTTP error! status: ${response.status}`);
         } else {
-          const responseData = await response.text();
-          let counter = 0;
+          const skipOutputHeader = response.headers.get('Hydro-Skip-Output');
 
-          Alpine.morph(component, responseData, {
-            updating: (from, to, childrenOnly, skip) => {
-              if (counter !== 0 && to.getAttribute && to.getAttribute("hydro") !== null && from.getAttribute && from.getAttribute("hydro") !== null) {
-                if (to.getAttribute("hydro-placeholder") !== null) {
-                  skip();
+          if (!skipOutputHeader) {
+            const responseData = await response.text();
+            let counter = 0;
+
+            Alpine.morph(component, responseData, {
+              updating: (from, to, childrenOnly, skip) => {
+                if (counter !== 0 && to.getAttribute && to.getAttribute("hydro") !== null && from.getAttribute && from.getAttribute("hydro") !== null) {
+                  if (to.getAttribute("hydro-placeholder") !== null) {
+                    skip();
+                  }
                 }
-              }
 
-              if (from.getAttribute && from.getAttribute("hydro-operation-id")) {
-                to.setAttribute("hydro-operation-id", from.getAttribute("hydro-operation-id"));
-                to.disabled = from.disabled;
-                if (from.classList.contains('hydro-request')) {
-                  to.classList.add('hydro-request');
+                if (from.getAttribute && from.getAttribute("hydro-operation-id")) {
+                  to.setAttribute("hydro-operation-id", from.getAttribute("hydro-operation-id"));
+                  to.disabled = from.disabled;
+                  if (from.classList.contains('hydro-request')) {
+                    to.classList.add('hydro-request');
+                  }
                 }
-              }
 
-              if (from.tagName === "INPUT" && from.type === 'checkbox') {
-                from.checked = to.checked;
-              }
-
-              if (from.tagName === "INPUT" && from.type === 'text' && from.value !== to.getAttribute("value")) {
-                if (document.activeElement !== from) {
-                  from.value = to.value;
-                } else {
-                  to.setAttribute("data-update-on-blur", "");
+                if (from.tagName === "INPUT" && from.type === 'checkbox') {
+                  from.checked = to.checked;
                 }
-              }
 
-              counter++;
-            }
-          });
+                if (from.tagName === "INPUT" && from.type === 'text' && from.value !== to.getAttribute("value")) {
+                  if (document.activeElement !== from || (morphActiveElement && from.value !== to.value)) {
+                    from.value = to.value;
+                  } else {
+                    to.setAttribute("data-update-on-blur", "");
+                  }
+                }
+
+                counter++;
+              }
+            });
+          }
 
           const locationHeader = response.headers.get('Hydro-Location');
           if (locationHeader) {
@@ -296,7 +300,6 @@
           if (redirectHeader) {
             window.location.href = redirectHeader;
           }
-
 
           setTimeout(() => { // make sure the event handlers got registered
             const triggerHeader = response.headers.get('Hydro-Trigger');

@@ -87,8 +87,7 @@ public class ProductList : HydroComponent
 }
 ```
 
-In this case using a Hydro action might be an overkill, since it will cause an unnecessary additional request to the
-backend.
+In this case using a Hydro action might be an overkill, since it will cause an unnecessary additional request and rendering of the component.
 
 To avoid that, you can dispatch actions straight from your client code by using a `hydro-dispatch` tag helper:
 
@@ -101,6 +100,50 @@ To avoid that, you can dispatch actions straight from your client code by using 
 ```
 
 Now, after clicking the button, the event `OpenAddModal` will be triggered without calling Hydro action first.
+
+Another way to avoid the extra render of the component is to use `[SkipOutput]` attribute on the Hydro action:
+
+```csharp
+// ProductList.cshtml.cs~~~~
+
+public class ProductList : HydroComponent
+{
+    [SkipOutput]
+    public void Add() =>
+        Dispatch(new OpenAddModal());
+}
+```
+
+> **_NOTE:_** When using `[SkipOutput]` any changes to the state won't be persisted.
+
+## Synchronous vs asynchronous
+
+By default, Hydro events are dispatched synchronously, which means they will follow one internal operation in Hydro.
+
+Let's take a look at this example of a synchronous event:
+
+```c#
+public void Add()
+{
+    Count++;
+    Dispatch(new CountChangedEvent(Count));
+}
+```
+
+`Add` triggers the event synchronously, so the button that triggers this action will be disabled until both the action and the event execution are done.
+
+Now, let's compare it with the asynchronous way:
+
+```c#
+public void Add()
+{
+    Count++;
+    Dispatch(new CountChangedEvent(Count), asynchronous: true);
+}
+```
+
+`Add` triggers the event asynchronously, so the button that triggers this action will be disabled until both the action and the event execution are done.
+
 
 ## Events scope
 
