@@ -130,7 +130,7 @@ public void Add()
 }
 ```
 
-`Add` triggers the event synchronously, so the button that triggers this action will be disabled until both the action and the event execution are done.
+`Add` triggers the event synchronously, so the button that triggers this action will be disabled until both the action and the event executions are done.
 
 Now, let's compare it with the asynchronous way:
 
@@ -142,7 +142,7 @@ public void Add()
 }
 ```
 
-`Add` triggers the event asynchronously, so the button that triggers this action will be disabled until both the action and the event execution are done.
+`Add` triggers the event asynchronously, so the button that triggers this action will be disabled until the action is done. The event execution won't be connected with the action's pipeline and will be run on its own.
 
 
 ## Events scope
