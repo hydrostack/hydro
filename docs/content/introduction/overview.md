@@ -10,7 +10,7 @@ outline: deep
 
 Hydro utilizes the following technologies to make it all work:
 
-- **Razor views (\*.cshtml)**  
+- **Razor views and view components (\*.cshtml)**  
   Razor views form the backbone of Hydro's UI generation. They allow for a familiar, server-side rendering strategy that has been a foundation of .NET web development for many years. These *.cshtml files enable a seamless mix of HTML and C# code, allowing for robust and dynamic webpage generation.
 
 
