@@ -1,4 +1,4 @@
-![Hydro](https://raw.githubusercontent.com/hydrostack/hydro/main/shared/logo_95.png)
+![Hydro](https://raw.githubusercontent.com/hydrostack/hydro/main/shared/logo_s.svg)
 
 ---
 Bring stateful and reactive components to ASP.NET Core without writing JavaScript
