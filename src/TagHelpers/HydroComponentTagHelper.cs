@@ -75,11 +75,6 @@ public sealed class HydroComponentTagHelper : TagHelper
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(output);
 
-        if (ViewContext?.ViewData.Model == null)
-        {
-            return;
-        }
-        
         output.TagName = null;
         
         var viewComponentHelper = ViewContext.HttpContext.RequestServices.GetService<IViewComponentHelper>();

@@ -95,6 +95,7 @@
   }
 
   let binding = {};
+  let dirty = {};
 
   async function hydroEvent(el, url, eventData) {
     const operationId = eventData.operationId;
@@ -127,13 +128,21 @@
       clearTimeout(binding[url].timeout);
     }
 
+    let propertyName = el.getAttribute('name');
+
     const value = el.tagName === "INPUT" && el.type === 'checkbox' ? el.checked : el.value;
-    binding[url].formData.set(el.getAttribute('name'), value);
+    binding[url].formData.set(propertyName, value);
 
     return await new Promise(resolve => {
       binding[url].timeout = setTimeout(async () => {
-        await hydroRequest(el, url, null, binding[url].formData, 'bind');
+        const requestFormData = binding[url].formData;
         binding[url].formData = new FormData();
+        const bindOperationId = generateGuid();
+        dirty[propertyName] = bindOperationId;
+        await hydroRequest(el, url, null, requestFormData, 'bind', null, bindOperationId);
+        if (dirty[propertyName] === bindOperationId){
+          delete dirty[propertyName];
+        }
         resolve();
       }, 10);
     });
@@ -247,7 +256,7 @@
             // ignore
           }
 
-          document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, {detail: {data: eventDetail}}));
+          document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, { detail: { data: eventDetail } }));
           throw new Error(`HTTP error! status: ${response.status}`);
         } else {
           const skipOutputHeader = response.headers.get('Hydro-Skip-Output');
@@ -272,15 +281,21 @@
                   }
                 }
 
-                if (from.tagName === "INPUT" && from.type === 'checkbox') {
-                  from.checked = to.checked;
-                }
+                const fieldName = from.getAttribute && from.getAttribute("name");
 
-                if (from.tagName === "INPUT" && from.type === 'text' && from.value !== to.getAttribute("value")) {
-                  if (document.activeElement !== from || (morphActiveElement && from.value !== to.value)) {
-                    from.value = to.value;
-                  } else {
-                    to.setAttribute("data-update-on-blur", "");
+                if (fieldName && dirty[fieldName] && dirty[fieldName] !== operationId) {
+                  skip();
+                } else {
+                  if (from.tagName === "INPUT" && from.type === 'checkbox') {
+                    from.checked = to.checked;
+                  }
+
+                  if (from.tagName === "INPUT" && from.type === 'text' && from.value !== to.getAttribute("value")) {
+                    if (document.activeElement !== from || (morphActiveElement && from.value !== to.value)) {
+                      from.value = to.value;
+                    } else {
+                      to.setAttribute("data-update-on-blur", "");
+                    }
                   }
                 }
 
@@ -380,7 +395,7 @@
 window.Hydro = new HydroCore();
 
 document.addEventListener('alpine:init', () => {
-  Alpine.directive('hydro-action', (el, {expression}, {effect, cleanup}) => {
+  Alpine.directive('hydro-action', (el, { expression }, { effect, cleanup }) => {
     effect(() => {
       const customEvent = el.getAttribute('hydro-event');
       const eventName = customEvent || (el.tagName === 'FORM' ? 'submit' : 'click');
@@ -406,7 +421,7 @@ document.addEventListener('alpine:init', () => {
     });
   });
 
-  Alpine.directive('hydro-dispatch', (el, {expression}, {effect, cleanup}) => {
+  Alpine.directive('hydro-dispatch', (el, { expression }, { effect, cleanup }) => {
     effect(() => {
       if (!document.contains(el)) {
         return;
@@ -461,7 +476,7 @@ document.addEventListener('alpine:init', () => {
     });
   });
 
-  Alpine.directive('hydro-bind', (el, {expression, modifiers}, {effect, cleanup}) => {
+  Alpine.directive('hydro-bind', (el, { expression, modifiers }, { effect, cleanup }) => {
     effect(() => {
       const event = expression || "change";
 
@@ -487,6 +502,7 @@ document.addEventListener('alpine:init', () => {
       const blurHandler = async (event) => {
         if (progress || event.target.getAttribute("data-update-on-blur") !== null) {
           clearTimeout(timeout);
+          progress = false;
           await window.Hydro.hydroBind(event.target);
         }
       };
@@ -500,7 +516,7 @@ document.addEventListener('alpine:init', () => {
     });
   });
 
-  Alpine.directive('on-hydro-event', (el, {expression}, {effect, cleanup}) => {
+  Alpine.directive('on-hydro-event', (el, { expression }, { effect, cleanup }) => {
     effect(() => {
       const component = window.Hydro.findComponent(el);
 
@@ -530,7 +546,7 @@ document.addEventListener('alpine:init', () => {
 
   let currentBoostUrl;
 
-  Alpine.directive('hydro-link', (el, {expression}, {effect, cleanup}) => {
+  Alpine.directive('hydro-link', (el, { expression }, { effect, cleanup }) => {
     effect(() => {
       const handleClick = async (event) => {
         event.preventDefault();

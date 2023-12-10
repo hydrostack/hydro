@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using HtmlAgilityPack;
+using Hydro.Configuration;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +22,7 @@ namespace Hydro;
 public abstract class HydroComponent : ViewComponent
 {
     private string _componentId;
-    private bool _skipOutput = false;
+    private bool _skipOutput;
 
     private readonly ConcurrentDictionary<CacheKey, object> _requestCache = new();
     private static readonly ConcurrentDictionary<CacheKey, object> PersistentCache = new();
@@ -38,6 +39,7 @@ public abstract class HydroComponent : ViewComponent
     };
 
     private static readonly ConcurrentDictionary<Type, IHydroAuthorizationFilter[]> ComponentAuthorizationAttributes = new();
+    private HydroOptions _options;
 
     /// <summary>
     /// Provides indication if ModelState is valid
@@ -59,6 +61,14 @@ public abstract class HydroComponent : ViewComponent
     /// </summary>
     public bool IsModelTouched { get; set; }
 
+    public virtual string Context { get; }
+
+    /// <summary />
+    public HydroComponent()
+    {
+        Subscribe<HydroSetProperty>(data => SetPropertyValue(data.Name, data.Value));
+    }
+
     /// <summary>
     /// Implementation of ViewComponent's InvokeAsync method
     /// </summary>
@@ -71,6 +81,7 @@ public abstract class HydroComponent : ViewComponent
         Key = key;
 
         var persistentState = HttpContext.RequestServices.GetService<IPersistentState>();
+        _options = HttpContext.RequestServices.GetService<HydroOptions>();
 
         var componentHtml = HttpContext.IsHydro(excludeBoosted: true)
             ? await RenderOnlineComponent(persistentState)
@@ -142,7 +153,7 @@ public abstract class HydroComponent : ViewComponent
         var operationId = !asynchronous && HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.OperationId, out var incomingOperationId)
             ? incomingOperationId.First()
             : Guid.NewGuid().ToString("N");
-        
+
         _dispatchEvents.Add(new HydroComponentEvent
         {
             Name = name,
@@ -252,14 +263,16 @@ public abstract class HydroComponent : ViewComponent
         _componentId = componentId;
 
         PopulateBaseModel(persistentState);
-        PopulateRequestModel();
+        await PopulateRequestModel();
         if (!await AuthorizeAsync())
         {
             return string.Empty;
         }
 
-        await TriggerMethod();
         await TriggerEvent();
+        ValidateModel();
+
+        await TriggerMethod();
 
         if (!_skipOutput)
         {
@@ -268,8 +281,8 @@ public abstract class HydroComponent : ViewComponent
 
         PopulateDispatchers();
 
-        return !_skipOutput 
-            ? await GenerateComponentHtml(componentId, persistentState) 
+        return !_skipOutput
+            ? await GenerateComponentHtml(componentId, persistentState)
             : string.Empty;
     }
 
@@ -352,7 +365,7 @@ public abstract class HydroComponent : ViewComponent
         return rootElement.OuterHtml;
     }
 
-    private void BindModel(IFormCollection formCollection)
+    private async Task BindModel(IFormCollection formCollection)
     {
         if (!IsModelTouched)
         {
@@ -371,12 +384,31 @@ public abstract class HydroComponent : ViewComponent
 
         foreach (var pair in formCollection)
         {
-            var value = PropertyInjector.SetPropertyValue(this, pair.Key, pair.Value);
-            Bind(pair.Key, value);
-        }
+            var setter = PropertyInjector.GetPropertySetter(this, pair.Key, pair.Value);
 
-        ValidateModel();
+            if (setter != null)
+            {
+                var value = _options.ValueMappersDictionary.TryGetValue(setter.Value.Value.GetType(), out var mapper) 
+                    ? await mapper.Map(setter.Value.Value) 
+                    : setter.Value.Value;
+                
+                setter.Value.Setter(value);
+                Bind(pair.Key, value);
+            }
+            else
+            {
+                Bind(pair.Key, null);
+            }
+        }
     }
+
+    /// <summary>
+    /// Applies value to a component
+    /// </summary>
+    /// <param name="path">Path to the value</param>
+    /// <param name="value">Value</param>
+    public void SetPropertyValue(string path, object value) =>
+        PropertyInjector.SetPropertyValue(this, path, value);
 
     /// <summary>
     /// Triggered when a property is updated from the client
@@ -466,7 +498,7 @@ public abstract class HydroComponent : ViewComponent
             _skipOutput = true;
             HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.SkipOutput, "True");
         }
-        
+
         var operationId = HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.OperationId, out var incomingOperationId)
             ? incomingOperationId.First()
             : Guid.NewGuid().ToString("N");
@@ -534,7 +566,7 @@ public abstract class HydroComponent : ViewComponent
         var operationId = HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.OperationId, out var incomingOperationId)
             ? incomingOperationId.First()
             : Guid.NewGuid().ToString("N");
-        
+
         HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.OperationId, operationId);
 
         var isAsync = typeof(Task).IsAssignableFrom(methodInfo.ReturnType);
@@ -572,11 +604,11 @@ public abstract class HydroComponent : ViewComponent
         }
     }
 
-    private void PopulateRequestModel()
+    private async Task PopulateRequestModel()
     {
         if (HttpContext.Items.TryGetValue(HydroConsts.ContextItems.RequestForm, out var requestForm))
         {
-            BindModel((IFormCollection)requestForm);
+            await BindModel((IFormCollection)requestForm);
         }
     }
 
@@ -706,7 +738,7 @@ public abstract class HydroComponent : ViewComponent
         {
             foreach (var memberName in validationResult.MemberNames)
             {
-                if (IsModelTouched || TouchedProperties.Contains(memberName))
+                if (IsModelTouched || TouchedProperties.Contains(memberName) || TouchedProperties.Any(p => p.StartsWith($"{memberName}.")))
                 {
                     ModelState.AddModelError(memberName, validationResult.ErrorMessage!);
                 }

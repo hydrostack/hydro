@@ -29,7 +29,7 @@ internal static class PropertyInjector
         }
 
         var propertyInfos = type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
-            .Where(p => p.DeclaringType == type || p.DeclaringType == typeof(HydroComponent))
+            .Where(p => (p.DeclaringType == type || p.DeclaringType == typeof(HydroComponent)) && p.GetSetMethod()?.IsPublic == true && !p.GetCustomAttributes<TransientAttribute>().Any())
             .ToArray();
 
         CachedPropertyInfos.TryAdd(type, propertyInfos);
@@ -37,7 +37,58 @@ internal static class PropertyInjector
         return propertyInfos;
     }
 
-    public static object SetPropertyValue(object target, string propertyPath, StringValues value)
+    public static void SetPropertyValue(object target, string propertyPath, object value)
+    {
+        if (target == null)
+        {
+            throw new ArgumentNullException(nameof(target));
+        }
+
+        if (string.IsNullOrWhiteSpace(propertyPath))
+        {
+            throw new ArgumentException("Property path cannot be empty.", nameof(propertyPath));
+        }
+
+        var properties = propertyPath.Split('.');
+        var currentObject = target;
+
+        for (var i = 0; i < properties.Length - 1; i++)
+        {
+            currentObject = GetObjectOrIndexedValue(currentObject, properties[i]);
+        }
+
+        if (currentObject == null)
+        {
+            return;
+        }
+
+        var propName = properties[^1];
+
+        if (string.IsNullOrWhiteSpace(propName))
+        {
+            throw new InvalidOperationException("Wrong property path");
+        }
+
+        if (propName.Contains('['))
+        {
+            throw new NotSupportedException();
+        }
+
+        var propertyInfo = currentObject.GetType().GetProperty(propName);
+        if (propertyInfo == null)
+        {
+            return;
+        }
+
+        var converter = TypeDescriptor.GetConverter(propertyInfo.PropertyType);
+        var convertedValue = value == null || value.GetType() == propertyInfo.PropertyType
+            ? value
+            : converter.ConvertFrom(value);
+
+        propertyInfo.SetValue(currentObject, convertedValue);
+    }
+
+    public static (object Value, Action<object> Setter)? GetPropertySetter(object target, string propertyPath, StringValues value)
     {
         if (target == null)
         {
@@ -77,7 +128,6 @@ internal static class PropertyInjector
             : obj.GetType().GetProperty(propName)?.GetValue(obj);
     }
 
-
     private static object GetIndexedValue(object obj, string propName)
     {
         if (obj == null)
@@ -94,7 +144,7 @@ internal static class PropertyInjector
         }
 
         var value = propertyInfo.GetValue(obj);
-        
+
         if (value == null)
         {
             return null;
@@ -126,13 +176,13 @@ internal static class PropertyInjector
         return (Convert.ToInt32(iteratorValue), cleanedPropName);
     }
 
-    private static object SetValueOnObject(object obj, string propName, StringValues valueToSet)
+    private static (object, Action<object>)? SetValueOnObject(object obj, string propName, StringValues valueToSet)
     {
         if (obj == null)
         {
             return null;
         }
-        
+
         if (string.IsNullOrWhiteSpace(propName))
         {
             throw new InvalidOperationException("Wrong property path");
@@ -151,14 +201,14 @@ internal static class PropertyInjector
 
         var convertedValue = ConvertValue(valueToSet, propertyInfo.PropertyType);
         propertyInfo.SetValue(obj, convertedValue);
-        return convertedValue;
+        return (convertedValue, val => propertyInfo.SetValue(obj, val));
     }
 
-    private static object SetIndexedValue(object obj, string propName, StringValues valueToSet)
+    private static (object, Action<object>)? SetIndexedValue(object obj, string propName, StringValues valueToSet)
     {
         var (index, cleanedPropName) = GetIndexAndCleanedPropertyName(propName);
         var propertyInfo = obj.GetType().GetProperty(cleanedPropName);
-        var convertedValue = ConvertValue(valueToSet, propertyInfo.PropertyType);
+        var convertedValue = ConvertValue(valueToSet, propertyInfo!.PropertyType);
 
         var value = propertyInfo.GetValue(obj);
 
@@ -166,7 +216,7 @@ internal static class PropertyInjector
         {
             throw new InvalidOperationException("Cannot set value to null");
         }
-        
+
         if (propertyInfo.PropertyType.IsArray)
         {
             if (value is not Array array)
@@ -174,23 +224,20 @@ internal static class PropertyInjector
                 throw new InvalidOperationException("Wrong type");
             }
 
-            array.SetValue(convertedValue, index);
+            return (convertedValue, val => array.SetValue(val, index));
         }
-        else if (typeof(IList).IsAssignableFrom(propertyInfo.PropertyType))
+
+        if (typeof(IList).IsAssignableFrom(propertyInfo.PropertyType))
         {
             if (value is not IList list)
             {
                 throw new InvalidOperationException("Wrong type");
             }
 
-            list[index] = convertedValue;
-        }
-        else
-        {
-            throw new InvalidOperationException($"Indexed access for property '{cleanedPropName}' is not supported.");
+            return (convertedValue, val => list[index] = val);
         }
 
-        return convertedValue;
+        throw new InvalidOperationException($"Indexed access for property '{cleanedPropName}' is not supported.");
     }
 
     private static object ConvertValue(StringValues valueToConvert, Type destinationType)
