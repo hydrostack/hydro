@@ -17,7 +17,8 @@ export default defineConfig({
         items: [
           { text: 'Overview', link: '/introduction/overview' },
           { text: 'Motivation', link: '/introduction/motivation' },
-          { text: 'Getting started', link: '/introduction/getting-started' }
+          { text: 'Getting started', link: '/introduction/getting-started' },
+          { text: 'Comparisons', link: '/introduction/comparisons' }
         ]
       },
       {
@@ -34,12 +35,19 @@ export default defineConfig({
           { text: 'Errors handling', link: '/features/errors-handling' },
           { text: 'Anti-forgery token', link: '/features/xsrf-token' },
           { text: 'User interface utilities', link: '/features/ui-utils' },
+          { text: 'Using JavaScript', link: '/features/js' },
         ]
       },
       {
         text: 'Advanced concepts',
         items: [
           { text: 'Request queuing', link: '/advanced/request-queuing' },
+        ]
+      },
+      {
+        text: 'Examples',
+        items: [
+          { text: 'Apps', link: '/examples/apps' },
         ]
       }
     ],

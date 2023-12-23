@@ -22,7 +22,7 @@ public class Counter : HydroComponent
 }
 ```
 
-A DOM element can be bound to an action method by using the `hydro-action` tag helper:
+A browser event of an element can be attached to an action method by using the `hydro-on` tag helper:
 
 ```razor
 <!-- Counter.cshtml -->
@@ -30,15 +30,33 @@ A DOM element can be bound to an action method by using the `hydro-action` tag h
 @model Counter
 <div>
   Count: <strong>@Model.Count</strong>
-  <button hydro-action="Add">Add</button>
+  <button hydro-on:click="@(() => Model.Add())">
+    Add
+  </button>
 </div>
 ```
 
-The attribute `hydro-action` expects a name of the callback method, in our case `Add`.
+The attribute `hydro-on` can be defined as:
+
+> hydro-on:**event**="**expression**"
+
+where:
+- **event**: a definition of the event handler that is compatible with Alpine.js's [x-on directive](https://alpinejs.dev/directives/on)
+- **expression**: C# lambda expression that calls the the callback method
+
+Examples:
+
+```razor
+<button hydro-on:click="@(() => Model.Add(20))">
+
+<div hydro-on:click.outside="@(() => Model.Close())">
+
+<input type="text" hydro-on:keyup.shift.enter="@(() => Model.Save())">
+```
 
 ## Arguments
 
-If your action contains arguments, you can pass it using `param-*` attributes.
+If your action contains arguments, you can pass them in a regular way.
 
 Example:
 
@@ -62,7 +80,9 @@ public class Counter : HydroComponent
 @model Counter
 <div>
   Count: <strong>@Model.Count</strong>
-  <button hydro-action="Set" param-newValue="20">Add</button>
+  <button hydro-on:click="@(() => Model.Set(20))">
+    Set to 20
+  </button>
 </div>
 ```
 

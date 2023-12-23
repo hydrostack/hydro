@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 
@@ -29,7 +30,7 @@ internal static class PropertyInjector
         }
 
         var propertyInfos = type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
-            .Where(p => (p.DeclaringType == type || p.DeclaringType == typeof(HydroComponent)) && p.GetSetMethod()?.IsPublic == true && !p.GetCustomAttributes<TransientAttribute>().Any())
+            .Where(p => (p.DeclaringType != typeof(ViewComponent)) && p.GetSetMethod()?.IsPublic == true && !p.GetCustomAttributes<TransientAttribute>().Any())
             .ToArray();
 
         CachedPropertyInfos.TryAdd(type, propertyInfos);

@@ -23,7 +23,7 @@ The `Count` property can be set by a parameter, when this component is triggered
 <!-- Index.cshtml -->
 
 <hydro name="Counter" param-count="10"/>
-```
+```~~~~
 
 Or when using `vc:*` tag helpers:
 
@@ -35,10 +35,10 @@ Or when using `vc:*` tag helpers:
 
 or
 
-```c#
+```razor
 <!-- Index.cshtml -->
     
-@(await Component.InvokeAsync<Counter>(new { parameters = new { Count = 10 } }))
+@(await Component.Hydro<Counter>(new { Count = 10 }))
 ```
 
 ## State of the parameters in time
@@ -51,6 +51,12 @@ When rendering a Hydro component, you can provide an optional `key` argument:
 
 ```razor
 <hydro name="MyComponent" key="1"/>
+```
+
+or
+
+```razor
+@(await Component.Hydro<MyComponent>(key: "1"))
 ```
 
 It's used when you have multiple components of the same type on the page to make it possible to distinguish them during DOM updates.
@@ -68,5 +74,5 @@ or
 
 ```razor
 <hydro name="Product" key="1"/>
-<hydro name="Product" key="2" param-name="@("Item 2")"/>
+<hydro name="Product" key="2"/>
 ```

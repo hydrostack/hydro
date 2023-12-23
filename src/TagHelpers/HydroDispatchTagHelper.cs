@@ -48,17 +48,7 @@ public sealed class HydroDispatchTagHelper : TagHelper
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(output);
-
-        if (ViewContext?.ViewData.Model == null)
-        {
-            return;
-        }
-
-        if (!output.Attributes.Any(a => a.Name.StartsWith("x-")))
-        {
-            output.Attributes.Add(new("x-data"));
-        }
-
+        
         var data = new
         {
             name = GetFullTypeName(Data.GetType()),
@@ -71,11 +61,6 @@ public sealed class HydroDispatchTagHelper : TagHelper
             new HtmlString(JsonConvert.SerializeObject(data)),
             HtmlAttributeValueStyle.SingleQuotes)
         );
-
-        if (output.TagName.ToLower() == "a" && !output.Attributes.ContainsName("href"))
-        {
-            output.Attributes.Add("href", "#");
-        }
         
         if (!string.IsNullOrWhiteSpace(BrowserTriggerEvent))
         {

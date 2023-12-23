@@ -106,7 +106,7 @@
   }
 
   async function hydroBind(el) {
-    if (!Array.from(el.attributes).some(attr => attr.name.startsWith('x-hydro-bind'))) {
+    if (!isElementDirty(el)) {
       return;
     }
 
@@ -118,29 +118,35 @@
 
     const url = `/hydro/${component.name}`;
 
-    if (!binding[url]) {
-      binding[url] = {
+    if (!binding[component.id]) {
+      binding[component.id] = {
         formData: new FormData()
       };
-    }
-
-    if (binding[url].timeout) {
-      clearTimeout(binding[url].timeout);
     }
 
     let propertyName = el.getAttribute('name');
 
     const value = el.tagName === "INPUT" && el.type === 'checkbox' ? el.checked : el.value;
-    binding[url].formData.set(propertyName, value);
+    const bindAlreadyInitialized = [...binding[component.id].formData].length !== 0;
+
+    binding[component.id].formData.set(propertyName, value);
+    
+    if (bindAlreadyInitialized){
+      return Promise.resolve();
+    }
+    
+    if (binding[component.id].timeout) {
+      clearTimeout(binding[component.id].timeout);
+    }
 
     return await new Promise(resolve => {
-      binding[url].timeout = setTimeout(async () => {
-        const requestFormData = binding[url].formData;
-        binding[url].formData = new FormData();
+      binding[component.id].timeout = setTimeout(async () => {
+        const requestFormData = binding[component.id].formData;
+        // binding[url].formData = new FormData();
         const bindOperationId = generateGuid();
         dirty[propertyName] = bindOperationId;
         await hydroRequest(el, url, null, requestFormData, 'bind', null, bindOperationId);
-        if (dirty[propertyName] === bindOperationId){
+        if (dirty[propertyName] === bindOperationId) {
           delete dirty[propertyName];
         }
         resolve();
@@ -148,26 +154,29 @@
     });
   }
 
-  async function hydroAction(el, eventName) {
-    const url = el.getAttribute('x-hydro-action');
+  async function hydroAction(el, component, action, clientEvent) {
+    const url = `/hydro/${component.name}/${action.name}`;
 
-    if (document.activeElement && Array.from(document.activeElement.attributes).some(attr => attr.name.startsWith('x-hydro-bind')) && isElementDirty(document.activeElement)) {
-      await hydroBind(document.activeElement);
+    if (Array.from(el.attributes).some(attr => attr.name.startsWith('x-hydro-bind')) && isElementDirty(el)) {
+      await hydroBind(el);
     }
 
-    const formData = eventName === 'submit'
-      ? new FormData(el.closest("form"))
-      : null;
+    if (document.activeElement && document.activeElement !== el) {
+      const elToCheck = document.activeElement;
+      if (Array.from(elToCheck.attributes).some(attr => attr.name.startsWith('x-hydro-bind')) && isElementDirty(elToCheck)) {
+        await hydroBind(elToCheck);
+      }
+    }
 
     const operationId = generateGuid();
     el.setAttribute("hydro-operation-id", operationId);
 
-    await hydroRequest(el, url, null, formData, null, null, operationId, true);
+    await hydroRequest(el, url, null, null, null, null, operationId, true, JSON.stringify(action.parameters || {}), clientEvent);
   }
 
   let operationStatus = {};
 
-  async function hydroRequest(el, url, contentType, body, type, eventData, operationId, morphActiveElement) {
+  async function hydroRequest(el, url, contentType, body, type, eventData, operationId, morphActiveElement, params, clientEvent) {
     if (!document.contains(el)) {
       return;
     }
@@ -209,6 +218,10 @@
           headers['Content-Type'] = contentType;
         }
 
+        if (clientEvent) {
+          headers['Hydro-Client-Event-Name'] = clientEvent.type;
+        }
+
         if (config.Antiforgery) {
           headers[config.Antiforgery.HeaderName] = config.Antiforgery.Token;
         }
@@ -224,7 +237,7 @@
           headers['hydro-event-name'] = eventData.name;
         }
 
-        const parameters = el.getAttribute("hydro-parameters");
+        const parameters = params || el.getAttribute("hydro-parameters");
 
         if (parameters) {
           headers['Hydro-Parameters'] = parameters;
@@ -232,6 +245,10 @@
 
         if (operationId) {
           headers['Hydro-Operation-Id'] = operationId;
+        }
+
+        if (type === 'bind') {
+          binding[componentId].formData = new FormData();
         }
 
         const response = await fetch(url, {
@@ -290,11 +307,9 @@
                     from.checked = to.checked;
                   }
 
-                  if (from.tagName === "INPUT" && from.type === 'text' && from.value !== to.getAttribute("value")) {
+                  if (from.tagName === "INPUT" && ['text', 'number', 'date'].includes(from.type) && from.value !== to.getAttribute("value")) {
                     if (document.activeElement !== from || (morphActiveElement && from.value !== to.value)) {
                       from.value = to.value;
-                    } else {
-                      to.setAttribute("data-update-on-blur", "");
                     }
                   }
                 }
@@ -360,15 +375,15 @@
 
   function isElementDirty(element) {
     const type = element.type;
-    if (type === "checkbox" || type === "radio") {
+    if (['checkbox', 'radio'].includes(type)) {
       if (element.checked !== element.defaultChecked) {
         return true;
       }
-    } else if (type === "hidden" || type === "password" || type === "text" || type === "textarea") {
+    } else if (['hidden', 'password', 'text', 'textarea', 'number'].includes(type)) {
       if (element.value !== element.defaultValue) {
         return true;
       }
-    } else if (type === "select-one" || type === "select-multiple") {
+    } else if (["select-one", "select-multiple"].includes(type)) {
       for (let j = 0; j < element.options.length; j++) {
         if (element.options[j].selected !== element.options[j].defaultSelected) {
           return true;
@@ -388,6 +403,7 @@
     loadPageContent,
     findComponent,
     generateGuid,
+    hydroRequest,
     config
   };
 }
@@ -418,6 +434,24 @@ document.addEventListener('alpine:init', () => {
           el.removeEventListener(eventName, eventHandler);
         });
       }
+    });
+  });
+
+  Alpine.directive('hydro-on', (el, { value, expression }, { effect, cleanup }) => {
+    effect(() => {
+      const eventHandler = async (event) => {
+        event.preventDefault();
+        if (el.disabled) {
+          return;
+        }
+
+        setTimeout(() => window.Hydro.hydroAction(el, value, expression), 200)
+      };
+
+      el.addEventListener(value, eventHandler);
+      cleanup(() => {
+        el.removeEventListener(value, eventHandler);
+      });
     });
   });
 
@@ -476,45 +510,32 @@ document.addEventListener('alpine:init', () => {
     });
   });
 
-  Alpine.directive('hydro-bind', (el, { expression, modifiers }, { effect, cleanup }) => {
+  Alpine.directive('hydro-bind', (el, { value, modifiers }, { effect, cleanup }) => {
     effect(() => {
-      const event = expression || "change";
+      const event = value;
 
-      const debounce = modifiers.length === 2 && modifiers[0] === "debounce"
-        ? parseInt(modifiers[1])
-        : 200;
+      const debounce = parseInt(((modifiers[0] === 'debounce' && (modifiers[1] || '250ms')) || '0ms').replace('ms', ''));
 
       let timeout = 0;
-      let progress = false;
 
       const eventHandler = async (event) => {
-        event.preventDefault();
-
-        progress = true;
+        if (event === 'submit' || event === 'click'){
+          event.preventDefault();
+        }
+        
         clearTimeout(timeout);
 
         timeout = setTimeout(async () => {
           await window.Hydro.hydroBind(event.target);
-          progress = false;
         }, debounce);
       };
 
-      const blurHandler = async (event) => {
-        if (progress || event.target.getAttribute("data-update-on-blur") !== null) {
-          clearTimeout(timeout);
-          progress = false;
-          await window.Hydro.hydroBind(event.target);
-        }
-      };
-
       el.addEventListener(event, eventHandler);
-      el.addEventListener("blur", blurHandler);
       cleanup(() => {
         el.removeEventListener(event, eventHandler);
-        el.removeEventListener("blur", blurHandler);
       });
     });
-  });
+  }).before('on');
 
   Alpine.directive('on-hydro-event', (el, { expression }, { effect, cleanup }) => {
     effect(() => {
@@ -574,4 +595,37 @@ document.addEventListener('alpine:init', () => {
       });
     });
   });
+
+  Alpine.directive('hydro-focus', (el, { expression }, { effect, cleanup }) => {
+    effect(() => {
+      el.querySelector(expression || 'input').focus();
+    });
+  });
+
+  Alpine.data('hydro', () => {
+    let debounceArray = {};
+
+    return ({
+      $component: null,
+      init() {
+        this.$component = window.Hydro.findComponent(this.$el);
+      },
+      async invoke(e, action) {
+        if (["click", "submit"].includes(e.type)) {
+          e.preventDefault();
+        }
+        await window.Hydro.hydroAction(this.$el, this.$component, action, e);
+      },
+      async bind(debounce) {
+        let element = this.$el;
+
+        clearTimeout(debounceArray[element]);
+
+        debounceArray[element] = setTimeout(async () => {
+          await window.Hydro.hydroBind(element);
+          delete debounceArray[element];
+        }, debounce || 0);
+      }
+    });
+  })
 });

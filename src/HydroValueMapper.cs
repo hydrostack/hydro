@@ -30,5 +30,7 @@ public interface IHydroValueMapper
 {
     /// <summary />
     Task<object> Map(object value);
+
+    /// <summary />
     Type MappedType { get; }
 }

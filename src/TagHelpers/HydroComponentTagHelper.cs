@@ -14,7 +14,7 @@ namespace Hydro.TagHelpers;
 public sealed class HydroComponentTagHelper : TagHelper
 {
     private const string NameAttribute = "name";
-    private const string ParametersDictionaryName = "params";
+    private const string ParametersAttribute = "params";
     private const string ParametersPrefix = "param-";
 
     private IDictionary<string, object> _parameters;
@@ -42,12 +42,18 @@ public sealed class HydroComponentTagHelper : TagHelper
     /// <summary>
     /// Parameters passed to the component
     /// </summary>
-    [HtmlAttributeName(ParametersDictionaryName, DictionaryAttributePrefix = ParametersPrefix)]
-    public IDictionary<string, object> Parameters
+    [HtmlAttributeName(DictionaryAttributePrefix = ParametersPrefix)]
+    public IDictionary<string, object> ParametersDictionary
     {
         get => _parameters ??= new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         set => _parameters = value;
     }
+    
+    /// <summary>
+    /// Parameters passed to the component
+    /// </summary>
+    [HtmlAttributeName(ParametersAttribute)]
+    public object Parameters { get; set; }
 
     /// <summary>
     /// Triggering event
@@ -82,7 +88,7 @@ public sealed class HydroComponentTagHelper : TagHelper
 
         var componentHtml = await viewComponentHelper.InvokeAsync(Name, new
         {
-            parameters = _parameters,
+            parameters = Parameters ?? _parameters,
             key = Key
         });
         

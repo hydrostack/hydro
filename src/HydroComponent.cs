@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using HtmlAgilityPack;
 using Hydro.Configuration;
+using Hydro.Utils;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -60,13 +61,17 @@ public abstract class HydroComponent : ViewComponent
     /// Determines if the whole model was accessed already
     /// </summary>
     public bool IsModelTouched { get; set; }
-
-    public virtual string Context { get; }
+    
+    /// <summary>
+    /// Determines if the current execution is related to the component mounting
+    /// </summary>
+    [Transient]
+    public bool IsMount { get; set; }
 
     /// <summary />
     public HydroComponent()
     {
-        Subscribe<HydroSetProperty>(data => SetPropertyValue(data.Name, data.Value));
+        Subscribe<HydroBind>(data => SetPropertyValue(data.Name, data.Value));
     }
 
     /// <summary>
@@ -78,6 +83,7 @@ public abstract class HydroComponent : ViewComponent
     {
         ApplyParameters(parameters);
 
+        ViewContext.ViewData.TemplateInfo.HtmlFieldPrefix = null;
         Key = key;
 
         var persistentState = HttpContext.RequestServices.GetService<IPersistentState>();
@@ -270,7 +276,8 @@ public abstract class HydroComponent : ViewComponent
         }
 
         await TriggerEvent();
-        ValidateModel();
+
+        ValidateTouched();
 
         await TriggerMethod();
 
@@ -285,7 +292,7 @@ public abstract class HydroComponent : ViewComponent
             ? await GenerateComponentHtml(componentId, persistentState)
             : string.Empty;
     }
-
+    
     private async Task<string> RenderOnlineNestedComponent(IPersistentState persistentState)
     {
         var componentId = GenerateComponentId(Key);
@@ -301,6 +308,7 @@ public abstract class HydroComponent : ViewComponent
             return string.Empty;
         }
 
+        IsMount = true;
         await MountAsync();
         await RenderAsync();
         return await GenerateComponentHtml(componentId, persistentState);
@@ -319,9 +327,9 @@ public abstract class HydroComponent : ViewComponent
             return string.Empty;
         }
 
+        IsMount = true;
         await MountAsync();
         await RenderAsync();
-
         return await GenerateComponentHtml(componentId, persistentState);
     }
 
@@ -331,16 +339,20 @@ public abstract class HydroComponent : ViewComponent
         var mainId = parentComponentId ?? $"{Guid.NewGuid():N}";
         var typeName = GetType().Name;
 
-        return Hash($"{mainId}-{typeName}-{key}");
+
+        var generateComponentId = Hash($"{mainId}-{typeName}-{key}");
+        return generateComponentId;
     }
 
     private async Task<string> GenerateComponentHtml(string componentId, IPersistentState persistentState)
     {
+        var previousParentComponentId = HttpContext.Items[HydroConsts.Component.ParentComponentId];
         HttpContext.Items[HydroConsts.Component.ParentComponentId] = componentId;
-
-        var componentHtml = await GetComponentHtml();
-        var componentHtmlDocument = new HtmlDocument();
-        componentHtmlDocument.LoadHtml(componentHtml);
+        
+        var componentHtmlDocument = await GetComponentHtml();
+        
+        HttpContext.Items[HydroConsts.Component.ParentComponentId] = previousParentComponentId;
+        
         var root = componentHtmlDocument.DocumentNode;
 
         if (root.ChildNodes.Count(n => n.NodeType == HtmlNodeType.Element) != 1)
@@ -352,6 +364,7 @@ public abstract class HydroComponent : ViewComponent
 
         rootElement.SetAttributeValue("id", componentId);
         rootElement.SetAttributeValue("hydro-name", GetType().Name);
+        rootElement.SetAttributeValue("x-data", "hydro");
         var hydroAttribute = rootElement.SetAttributeValue("hydro", null);
         hydroAttribute.QuoteType = AttributeValueQuote.WithoutValue;
 
@@ -385,19 +398,20 @@ public abstract class HydroComponent : ViewComponent
         foreach (var pair in formCollection)
         {
             var setter = PropertyInjector.GetPropertySetter(this, pair.Key, pair.Value);
-
+            var propertyPath = PropertyPath.ExtractPropertyPath(pair.Key);
+            
             if (setter != null)
             {
-                var value = _options.ValueMappersDictionary.TryGetValue(setter.Value.Value.GetType(), out var mapper) 
-                    ? await mapper.Map(setter.Value.Value) 
+                var value = _options.ValueMappersDictionary.TryGetValue(setter.Value.Value.GetType(), out var mapper)
+                    ? await mapper.Map(setter.Value.Value)
                     : setter.Value.Value;
-                
+
                 setter.Value.Setter(value);
-                Bind(pair.Key, value);
+                await BindAsync(propertyPath, value);
             }
             else
             {
-                Bind(pair.Key, null);
+                await BindAsync(propertyPath, null);
             }
         }
     }
@@ -407,16 +421,31 @@ public abstract class HydroComponent : ViewComponent
     /// </summary>
     /// <param name="path">Path to the value</param>
     /// <param name="value">Value</param>
-    public void SetPropertyValue(string path, object value) =>
+    public async Task SetPropertyValue(string path, object value)
+    {
         PropertyInjector.SetPropertyValue(this, path, value);
+        TouchedProperties.Add(path);
+        await BindAsync(PropertyPath.ExtractPropertyPath(path), value);
+    }
 
     /// <summary>
     /// Triggered when a property is updated from the client
     /// </summary>
     /// <param name="property">Property path</param>
     /// <param name="value">New value</param>
-    public virtual void Bind(string property, object value)
+    public virtual void Bind(PropertyPath property, object value)
     {
+    }
+
+    /// <summary>
+    /// Triggered when a property is updated from the client
+    /// </summary>
+    /// <param name="property">Property path</param>
+    /// <param name="value">New value</param>
+    public virtual Task BindAsync(PropertyPath property, object value)
+    {
+        Bind(property, value);
+        return Task.CompletedTask;
     }
 
     private HtmlNode GetModelScript(HtmlDocument document, string id, IPersistentState persistentState)
@@ -475,15 +504,21 @@ public abstract class HydroComponent : ViewComponent
             return;
         }
 
-        var methodInfo = GetType()
-            .GetMethod(methodValue, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+        var methodInfos = GetType()
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance);
+
+        var requestParameters = GetParameters();
+
+        var methodInfo = methodInfos.FirstOrDefault(m =>
+            string.Equals(m.Name, methodValue, StringComparison.OrdinalIgnoreCase)
+            && m.GetParameters().Select(p => p.Name).SequenceEqual(requestParameters.Select(p => p.Key))
+        );
 
         if (methodInfo == null)
         {
             return;
         }
 
-        var requestParameters = GetParameters();
         var methodParameters = methodInfo.GetParameters();
         var methodAttributes = methodInfo.GetCustomAttributes();
 
@@ -615,16 +650,35 @@ public abstract class HydroComponent : ViewComponent
     private string GetRootComponentId() =>
         ((string[])HttpContext.Items[HydroConsts.ContextItems.RenderedComponentIds]).First();
 
-    private string GetViewPath()
+    private string GetViewPath() =>
+        ViewPath ?? GetViewPath(GetType());
+
+    /// <summary>
+    /// Get the view path based on the type
+    /// </summary>
+    protected string GetViewPath(Type type)
     {
-        var type = GetType();
         var assemblyName = type.Assembly.GetName().Name;
         return $"{type.FullName!.Replace(assemblyName!, "~").Replace(".", "/")}.cshtml";
     }
 
-    private async Task<string> GetComponentHtml()
+    /// Get the view path based on the view name
+    protected string GetViewPath(string viewName)
     {
-        await using var writer = new StringWriter();
+        var type = GetType();
+        return GetViewPath(type).Replace($"{type.Name}.cshtml", $"{viewName}.cshtml");
+    }
+
+    /// <summary>
+    /// Override this property if you want to use custom view path for the component
+    /// </summary>
+    public virtual string ViewPath => null;
+
+    private async Task<HtmlDocument> GetComponentHtml()
+    {
+        using var stream = new MemoryStream();
+        await using var writer = new StreamWriter(stream);
+        
         var previousWriter = ViewComponentContext.ViewContext.Writer;
         ViewComponentContext.ViewContext.Writer = writer;
         ViewComponentContext.ViewContext.CheckBoxHiddenInputRenderMode = CheckBoxHiddenInputRenderMode.None;
@@ -633,10 +687,12 @@ public abstract class HydroComponent : ViewComponent
 
         await result.ExecuteAsync(ViewComponentContext);
         await writer.FlushAsync();
-        var html = writer.ToString();
 
+        stream.Position = 0;
+        var htmlDocument = new HtmlDocument();
+        htmlDocument.Load(stream);
         ViewComponentContext.ViewContext.Writer = previousWriter;
-        return html;
+        return htmlDocument;
     }
 
     private void ApplyParameters(object parameters)
@@ -727,8 +783,20 @@ public abstract class HydroComponent : ViewComponent
         }
     }
 
-    private void ValidateModel()
+    /// <summary>
+    /// Validate the model state
+    /// </summary>
+    /// <returns>True if the state is valid</returns>
+    public bool Validate()
     {
+        IsModelTouched = true;
+        return ValidateTouched();
+    }
+
+    private bool ValidateTouched()
+    {
+        ModelState.Clear();
+        
         var context = new ValidationContext(this, serviceProvider: null, items: null);
         var validationResults = new List<ValidationResult>();
         Validator.TryValidateObject(this, context, validationResults, true);
@@ -746,6 +814,8 @@ public abstract class HydroComponent : ViewComponent
         }
 
         IsValid = ModelState.IsValid;
+
+        return IsValid;
     }
 
     private static IEnumerable<ValidationResult> ExtractValidationResults(IEnumerable<ValidationResult> validationResults)

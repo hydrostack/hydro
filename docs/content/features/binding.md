@@ -32,17 +32,17 @@ public class NameForm : HydroComponent
 
 ## Trigger event
 
-The default event used for binding is `change`. To choose another event, use `bind-event` attribute:
+The default event used for binding is `change`. To choose another event, you can specify it:
 
 ```razor
-<input asp-for="Search" hydro-bind bind-event="input" />
+<input asp-for="Search" hydro-bind:input />
 ```
 
 ## Debouncing
 
-By default, all the events are debounced with 200ms. To change it, use `bind-debounce` attribute:
+To debounce the bind event use the `.debounce` attribute expression:
 ```razor
-<input asp-for="Search" hydro-bind bind-event="input" bind-debounce="500" />
+<input asp-for="Search" hydro-bind:keydown.debounce.500ms />
 ```
 
 ## Handling `bind` event in a component
@@ -52,9 +52,9 @@ In order to inject custom logic after `bind` is executed, override the `Bind` me
 ```c#
 public string Name { get; set; }
 
-public override void Bind(string property, object value)
+public override void Bind(PropertyPath property, object value)
 {
-    if (property == nameof(Name))
+    if (property.Name == nameof(Name))
     {
         var newValue = (string)value;
         // your logic    

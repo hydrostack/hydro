@@ -30,7 +30,7 @@ public sealed class HydroActionTagHelper : TagHelper
     /// </summary>
     [HtmlAttributeName(TagAttribute)]
     public string Method { get; set; }
-    
+
     /// <summary>
     /// Parameters passed to the action
     /// </summary>
@@ -46,18 +46,12 @@ public sealed class HydroActionTagHelper : TagHelper
     /// </summary>
     [HtmlAttributeName("hydro-event")]
     public string Event { get; set; }
-    
+
     /// <summary>
-    /// Delay of executing the action, in milliseconds
+    /// Disable during execution
     /// </summary>
-    [HtmlAttributeName("delay")]
-    public int? Delay { get; set; } = 0;
-    
-    /// <summary>
-    /// 
-    /// </summary>
-    [HtmlAttributeName("run")]
-    public bool Run { get; set; }
+    [HtmlAttributeName("hydro-disable")]
+    public bool Disable { get; set; }
 
     /// <summary>
     /// Processes the tag helper
@@ -67,45 +61,19 @@ public sealed class HydroActionTagHelper : TagHelper
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(output);
 
-        if (ViewContext?.ViewData.Model == null)
+        var eventName = Event ?? (context.TagName.ToLower() == "form" ? "submit" : "click");
+        
+        if (Disable || new[] { "click", "submit" }.Contains(eventName))
         {
-            return;
+            output.Attributes.Add(new("data-loading-disable"));
         }
 
-        if (!output.Attributes.Any(a => a.Name.StartsWith("x-")))
+        var invokeData = JsonConvert.SerializeObject(new
         {
-            output.Attributes.Add(new("x-data"));
-        }
-        
-        var methodName = Method.Replace("Model.", string.Empty);
-        var modelType = ViewContext.ViewData.ModelMetadata.ContainerType ?? ViewContext.ViewData.Model.GetType();
-        output.Attributes.Add("x-hydro-action", $"/hydro/{modelType.Name}/{methodName}".ToLower());
+            name = Method,
+            parameters = _parameters
+        });
 
-        if (Parameters.Any())
-        {
-            output.Attributes.Add(new TagHelperAttribute("hydro-parameters", new HtmlString(JsonConvert.SerializeObject(_parameters)), HtmlAttributeValueStyle.SingleQuotes));
-        }
-        
-        output.Attributes.Add(new("data-loading-disable"));
-
-        if (output.TagName.ToLower() == "a" && !output.Attributes.ContainsName("href"))
-        {
-            output.Attributes.Add("href", "#");
-        }
-        
-        if (Delay != null && Delay != 0)
-        {
-            output.Attributes.Add("hydro-delay", Delay.ToString());
-        }
-        
-        if (!string.IsNullOrWhiteSpace(Event))
-        {
-            output.Attributes.Add("hydro-event", Event);
-        }
-        
-        if (Run)
-        {
-            output.Attributes.Add("hydro-autorun", "true");
-        }
+        output.Attributes.Add(new TagHelperAttribute($"x-on:{eventName}.prevent", new HtmlString($"invoke($event, {invokeData})"), HtmlAttributeValueStyle.SingleQuotes));
     }
 }

@@ -25,7 +25,7 @@ public sealed class HydroBoostTagHelper : TagHelper
         ArgumentNullException.ThrowIfNull(output);
 
         output.Attributes.RemoveAll("hydro-boost");
-        output.Attributes.Add("x-data", "");
+        output.Attributes.Add(new("x-data"));
         output.Attributes.Add("x-hydro-link", "");
     }
 }

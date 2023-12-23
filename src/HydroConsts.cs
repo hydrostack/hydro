@@ -6,6 +6,7 @@ internal static class HydroConsts
     {
         public const string Model = "hydro-model";
         public const string EventName = "hydro-event-name";
+        public const string ClientEventName = "Hydro-Client-Event-Name";
         public const string Boosted = "Hydro-Boosted";
         public const string Hydro = "Hydro-Request";
         public const string Parameters = "Hydro-Parameters";

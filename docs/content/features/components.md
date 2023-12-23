@@ -21,7 +21,9 @@ Let's see it in action:
 
 <div>
   Count: <strong>@Model.Count</strong>
-  <button hydro-action="Add">Add</button>
+  <button hydro-on:click="@(() => Model.Add())">
+    Add
+  </button>
 </div>
 ```
 
@@ -43,7 +45,7 @@ Notes about the above code:
 1. Component's view model is set to be the Hydro component. It's because all the state lays there. If you want to extract the model to a separate file, you can do it and reference it as one property on the component.
 2. Each component view must have only one root element, in our case it's the top level `div`.
 3. On the component view you can use `Model` to access your component's state, in our case: `Model.Count`
-4. Use `hydro-action` attribute to bind your DOM to the methods on the component. [Read more here](actions).
+4. Use `hydro-on` attribute to attach the browser events to the methods on the component. [Read more here](actions).
 
 ## Usage
 
@@ -63,10 +65,16 @@ via Hydro tag helper:
 ...
 ```
 
-or via ASP.NET Core extension method:
-```c#
+or via `Component`:
+```razor
 ...
-await Component.InvokeAsync("Counter")
+@await Component.Hydro("Counter")
+...
+```
+or via `Component` with generic type:
+```razor
+...
+@await Component.Hydro<Counter>()
 ...
 ```
 

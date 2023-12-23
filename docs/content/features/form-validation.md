@@ -11,12 +11,16 @@ Hydro components provide model validation capabilities similar to traditional AS
 
 public class ProductForm : HydroComponent
 {
-    [Required]
-    [MaxLength(50)]
+    [Required, MaxLength(50)]
     public string Name { get; set; }
     
     public async Task Submit()
     {
+        if (!Validate())
+        {
+            return;
+        }
+        
         // your submit logic
     }
 }
@@ -27,7 +31,7 @@ public class ProductForm : HydroComponent
 
 @model ProductForm
 
-<form hydro-action="Submit">
+<form hydro-on:submit="@(() => Model.Submit())">
   <label asp-for="Name"></label>
   <input asp-for="Name"/>
   <span asp-validation-for="Name"></span>  
@@ -38,7 +42,7 @@ public class ProductForm : HydroComponent
 
 ## Custom validation
 
-It's possible to execute custom validation, either written manually or by running libraries like Fluent Validation. For example:
+It's possible to execute also custom validation. For example:
 
 ```csharp
 // Counter.cshtml.cs
@@ -58,4 +62,58 @@ public class Counter : HydroComponent
         Count++;
     }
 }
+```
+
+Attaching Fluent Validation:
+
+```csharp
+// Counter.cshtml.cs
+
+public class Counter(IValidator<Counter> validator) : HydroComponent
+{
+    public int Count { get; set; }
+    
+    public void Add()
+    {
+        if (this.Validate(validator))
+        {
+            return;
+        }
+        
+        Count++;
+    }
+    
+    public class Validator : AbstractValidator<Counter>
+    {
+        public Validator()
+        {
+            RuleFor(c => c.Count).LessThan(5);
+        }
+    }
+}
+
+// HydroValidationExtensions.cs
+
+public static class HydroValidationExtensions
+{
+    public static bool Validate<TComponent>(this TComponent component, IValidator<TComponent> validator) where TComponent : HydroComponent
+    {
+        component.IsModelTouched = true;
+        var result = validator.Validate(component);
+
+        if (result.IsValid)
+        {
+            return true;
+        }
+
+        foreach (var error in result.Errors) 
+        {
+            component.ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
+        }
+
+        return false;
+
+    }
+}
+
 ```

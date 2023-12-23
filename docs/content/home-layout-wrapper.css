@@ -1,0 +1,38 @@
+.home-wrapper {
+  margin: 0 auto;
+  position: relative;
+  width: 100%;
+  padding: 32px 48px 96px;
+}
+
+@media (min-width: 960px) {
+  .home-wrapper {
+    padding: 32px 64px 96px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .home-wrapper {
+    padding: 32px 0 96px;
+    max-width: 1152px;
+  }
+}
+
+.code-items {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -8px;
+}
+
+
+
+.code-item {
+  padding: 8px;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .code-item{
+    width: calc(100% / 2);
+  }
+}
