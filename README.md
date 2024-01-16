@@ -26,8 +26,8 @@ Alpine.js stands as a base for requests execution and  DOM swapping. But beyond 
 
 ## Samples
 
-- [Simple Todo application using Hydro](https://github.com/hydrostack/hydro-todo)
-- [Simple CRUD application using Hydro](https://github.com/hydrostack/hydro-showcase)
+- [Simple sales application using Hydro](https://github.com/hydrostack/hydro-sales)
+- [Simple to-do application using Hydro](https://github.com/hydrostack/hydro-todo)
 
 ## Installation
 
