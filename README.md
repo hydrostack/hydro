@@ -84,11 +84,13 @@ To create Hydro component, go to your components folder, for example in case of 
 
 <div>
   Count: <strong>@Model.Count</strong>
-  <button hydro-action="Add">Add</button>
+  <button hydro-on:click="@(() => Model.Add())">
+    Add
+  </button>
 </div>
 ```
 ```c#
-// Counter.cshtml.cs
+// Counter.cs
 
 public class Counter : HydroComponent
 {
@@ -105,13 +107,6 @@ public class Counter : HydroComponent
 
 To use your new component, you can render it in your Razor Page (e.g. `Index.cshtml`) in two ways:
 
-via ASP.NET Core tag helper:
-```razor
-...
-<vc:counter/>
-...
-```
-
 via Hydro tag helper:
 ```razor
 ...
@@ -119,10 +114,17 @@ via Hydro tag helper:
 ...
 ```
 
-or via ASP.NET Core extension method:
-```c#
+via ASP.NET Core tag helper:
+```razor
 ...
-await Component.InvokeAsync("Counter")
+<vc:counter/>
+...
+```
+
+or via extension method:
+```razor
+...
+@await Component.Hydro("Counter")
 ...
 ```
 
