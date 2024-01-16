@@ -17,13 +17,13 @@ hero:
 features:
   - icon: ♥️
     title: Razor Pages and MVC
-    details: Use familiar, server-side rendering strategy that has been a foundation of .NET web development for many years 
+    details: Use familiar, server-side rendering strategy that has been a foundation of .NET web development for many years.
   - icon: 🧩️
     title: Components
-    details: Build your application using components, which make it easy to structure and separate your codebase  
+    details: Build stateful and interactive components in an intuitive way, and use them in your Razor Pages or MVC views.
   - icon: ⚡️
-    title: Reactive and stateful
-    details: No full page reloads. After each action only update parts of the page that need it. 
+    title: Great user experience without JS
+    details: No full page reloads. After each action only update parts of the page that changed. No writing JavaScript required, but possible if needed.
 ---
 
 <style scoped>
