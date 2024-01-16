@@ -75,7 +75,7 @@ public class Counter(IValidator<Counter> validator) : HydroComponent
     
     public void Add()
     {
-        if (this.Validate(validator))
+        if (!this.Validate(validator))
         {
             return;
         }
@@ -101,18 +101,12 @@ public static class HydroValidationExtensions
         component.IsModelTouched = true;
         var result = validator.Validate(component);
 
-        if (result.IsValid)
-        {
-            return true;
-        }
-
         foreach (var error in result.Errors) 
         {
             component.ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
         }
 
-        return false;
-
+        return result.IsValid;
     }
 }
 
