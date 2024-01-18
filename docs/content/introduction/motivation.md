@@ -21,7 +21,7 @@ unnecessary problems to handle; front-end frameworks become more and more sophis
 
 Hydro offers the following features:
 - server side rendering
-- navigation enhancments
+- navigation enhancements
 - component state persistence across requests
 - UI interactivity
 
