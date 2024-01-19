@@ -14,8 +14,15 @@ public static class HydroHttpResponseExtensions
     /// </summary>
     /// <param name="response">HttpResponse instance</param>
     /// <param name="url">URL to redirect to</param>
-    public static void HydroRedirect(this HttpResponse response, string url) =>
+    public static void HydroRedirect(this HttpResponse response, string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            throw new ArgumentException("url is not provided", nameof(url));
+        }
+        
         response.Headers.Add("Hydro-Redirect", new StringValues(url));
+    }
 
     /// <summary>
     /// Add a response header that instructs Hydro to redirect to a specific page without page reload
@@ -25,6 +32,11 @@ public static class HydroHttpResponseExtensions
     /// <param name="payload">Object to pass to destination page</param>
     public static void HydroLocation(this HttpResponse response, string url, object payload = null)
     {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            throw new ArgumentException("url is not provided", nameof(url));
+        }
+        
         var data = new
         {
             path = url,
