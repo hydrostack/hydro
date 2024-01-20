@@ -28,6 +28,11 @@
       }
 
       if (!response.ok) {
+        const eventDetail = {
+          message: "Problem with loading the content",
+          data: null
+        }
+        document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, { detail: { data: eventDetail } }));
         throw new Error(`HTTP error! status: ${response.status}`);
       } else {
         let data = await response.text();
@@ -102,7 +107,7 @@
     const body = JSON.stringify(eventData.data);
     const hydroEvent = el.getAttribute("x-on-hydro-event");
     const wireEventData = JSON.parse(hydroEvent);
-    await hydroRequest(el, url, 'application/json', body, null, wireEventData, operationId);
+    await hydroRequest(el, url, 'application/json', body, 'event', wireEventData, operationId);
   }
 
   async function hydroBind(el) {
@@ -130,11 +135,11 @@
     const bindAlreadyInitialized = [...binding[component.id].formData].length !== 0;
 
     binding[component.id].formData.set(propertyName, value);
-    
-    if (bindAlreadyInitialized){
+
+    if (bindAlreadyInitialized) {
       return Promise.resolve();
     }
-    
+
     if (binding[component.id].timeout) {
       clearTimeout(binding[component.id].timeout);
     }
@@ -258,23 +263,35 @@
         });
 
         if (!response.ok) {
-          const contentType = response.headers.get("content-type");
-          let eventDetail = {};
-
-          try {
-            if (contentType && contentType.indexOf("application/json") !== -1) {
-              const json = await response.json();
-              eventDetail.message = json?.message || "Unhandled exception";
-              eventDetail.data = json?.data;
-            } else {
-              eventDetail.message = await response.text();
+          if (response.status === 400 && config.Antiforgery && response.headers.get("Refresh-Antiforgery-Token")) {
+            const json = await response.json();
+            config.Antiforgery.Token = json.token;
+          } else if (response.status === 403) {
+            if (type !== 'event') {
+              document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, { detail: { data: { message: "Unauthorized access" } } }));
             }
-          } catch {
-            // ignore
-          }
+            throw new Error(`HTTP error! status: ${response.status}`);
+          } else {
+            const contentType = response.headers.get("content-type");
+            let eventDetail = {};
 
-          document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, { detail: { data: eventDetail } }));
-          throw new Error(`HTTP error! status: ${response.status}`);
+            try {
+              if (contentType && contentType.indexOf("application/json") !== -1) {
+                const json = await response.json();
+                eventDetail.message = json?.message || "Unhandled exception";
+                eventDetail.data = json?.data;
+              } else {
+                eventDetail.message = await response.text();
+              }
+            } catch {
+              // ignore
+            }
+
+            if (type !== 'event') {
+              document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, { detail: { data: eventDetail } }));
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
         } else {
           const skipOutputHeader = response.headers.get('Hydro-Skip-Output');
 
@@ -519,10 +536,10 @@ document.addEventListener('alpine:init', () => {
       let timeout = 0;
 
       const eventHandler = async (event) => {
-        if (event === 'submit' || event === 'click'){
+        if (event === 'submit' || event === 'click') {
           event.preventDefault();
         }
-        
+
         clearTimeout(timeout);
 
         timeout = setTimeout(async () => {

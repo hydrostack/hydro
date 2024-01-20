@@ -78,7 +78,7 @@ This is fine in most scenarios when dispatching is not the only one operation we
 But sometimes your only intent is to dispatch an event:
 
 ```csharp
-// ProductList.cshtml.cs~~~~
+// ProductList.cshtml.cs
 
 public class ProductList : HydroComponent
 {
@@ -104,7 +104,7 @@ Now, after clicking the button, the event `OpenAddModal` will be triggered witho
 Another way to avoid the extra render of the component is to use `[SkipOutput]` attribute on the Hydro action:
 
 ```csharp
-// ProductList.cshtml.cs~~~~
+// ProductList.cshtml.cs
 
 public class ProductList : HydroComponent
 {

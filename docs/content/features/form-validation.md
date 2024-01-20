@@ -95,7 +95,7 @@ public class Counter(IValidator<Counter> validator) : HydroComponent
 // HydroValidationExtensions.cs
 
 public static class HydroValidationExtensions
-{
+{~~~~
     public static bool Validate<TComponent>(this TComponent component, IValidator<TComponent> validator) where TComponent : HydroComponent
     {
         component.IsModelTouched = true;

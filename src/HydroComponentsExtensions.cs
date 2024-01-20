@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Hydro.Configuration;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Hydro;
@@ -23,13 +24,31 @@ internal static class HydroComponentsExtensions
     {
         var componentName = componentType.Name;
 
-        app.MapPost($"/hydro/{componentName}/{{method?}}", async ([FromServices] IServiceProvider serviceProvider, [FromServices] IViewComponentHelper viewComponentHelper, [FromServices] HydroOptions hydroOptions, [FromServices] IAntiforgery antiforgery, HttpContext httpContext, string method) =>
+        app.MapPost($"/hydro/{componentName}/{{method?}}", async (
+            [FromServices] IServiceProvider serviceProvider,
+            [FromServices] IViewComponentHelper viewComponentHelper,
+            [FromServices] HydroOptions hydroOptions,
+            [FromServices] IAntiforgery antiforgery,
+            [FromServices] ILogger<HydroComponent> logger,
+            HttpContext httpContext,
+            string method
+        ) =>
         {
             if (hydroOptions.AntiforgeryTokenEnabled)
             {
-                await antiforgery.ValidateRequestAsync(httpContext);
+                try
+                {
+                    await antiforgery.ValidateRequestAsync(httpContext);
+                }
+                catch (AntiforgeryValidationException exception)
+                {
+                    logger.LogWarning(exception, "Antiforgery token not valid");
+                    var requestToken = antiforgery.GetTokens(httpContext).RequestToken;
+                    httpContext.Response.Headers.Add(HydroConsts.ResponseHeaders.RefreshToken, requestToken);
+                    return Results.BadRequest(new { token = requestToken });
+                }
             }
-            
+
             if (httpContext.IsHydro())
             {
                 await ExecuteRequestOperations(httpContext, method);
@@ -40,7 +59,7 @@ internal static class HydroComponentsExtensions
             var htmlContent = await viewComponentHelper.InvokeAsync(componentType);
 
             var content = await GetHtml(htmlContent);
-
+            
             return Results.Content(content, MediaTypeNames.Text.Html);
         });
     }
