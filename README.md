@@ -66,8 +66,6 @@ In layout's `head` tag:
 <script defer src="~/hydro/alpine.js" asp-append-version="true"></script>
 ```
 
-For Alpine.js you can use CDN as shown above or you can host it yourself.
-
 ## Quick start
 To create Hydro component, go to your components folder, for example in case of Razor Pages: `~/Pages/Components/`, and create these files:
 
