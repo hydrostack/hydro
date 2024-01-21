@@ -24,8 +24,6 @@
   margin: -8px;
 }
 
-
-
 .code-item {
   padding: 8px;
   width: 100%;
@@ -35,4 +33,33 @@
   .code-item{
     width: calc(100% / 2);
   }
+}
+
+.sponsoring {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding-top: 4rem;
+}
+
+.sponsor {
+  display: inline-block;
+  text-align: center;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color .25s,border-color .25s,background-color .25s;
+  border-radius: 20px;
+  padding: 0 20px;
+  line-height: 38px;
+  text-decoration: none;
+  font-size: 14px;
+  border: 1px solid var(--vp-button-sponsor-border);
+  color: var(--vp-button-sponsor-text);
+  background-color: var(--vp-button-sponsor-bg);
+}
+
+.sponsor:hover {
+  border-color: var(--vp-button-sponsor-hover-border);
+  color: var(--vp-button-sponsor-hover-text);
+  background-color: var(--vp-button-sponsor-hover-bg);
 }

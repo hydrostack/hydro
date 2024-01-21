@@ -127,4 +127,8 @@ public class Counter : HydroComponent
 }
 ```
 
+<div class="sponsoring">
+    <a class="sponsor" href="https://github.com/sponsors/kjeske" target="_blank" rel="noreferrer">Sponsor the author</a>
+</div>
+
 </div>

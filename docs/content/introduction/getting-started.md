@@ -50,23 +50,17 @@ app.Run();
 
 In `_ViewImports.cshtml` add:
 ```razor
-@addTagHelper *, {Your project assembly name}
 @addTagHelper *, Hydro
+@addTagHelper *, {Your project assembly name}
 ````
 
 In layout's `head` tag:
 ```html
-<!-- meta -->
 <meta name="hydro-config" />
-
-<!-- Hydro script -->
-<script src="~/hydro.js" asp-append-version="true"></script>
-
-<!-- Alpine.js libraries -->
-<script defer src="https://cdn.jsdelivr.net/npm/@@alpinejs/morph@3.x.x/dist/cdn.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script defer src="~/hydro/hydro.js" asp-append-version="true"></script>
+<script defer src="~/hydro/alpine.js" asp-append-version="true"></script>
 ```
 
-For Alpine.js you can use CDN as shown above or you can host it yourself.
+> NOTE: Hydro provides Alpine.js v3.13.3 with extensions combined into one file (`~/hydro/alpine.js`) for convenience. If you don't want to rely on the scripts provided by Hydro, you can manually specify Alpine.js sources. Make sure to include Alpine.js core script and Morph plugin.
 
 Now you are ready to create you first [component](/features/components).
