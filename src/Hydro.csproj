@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Scripts\hydro.js" Pack="true" PackagePath="scripts" />
+    <EmbeddedResource Include="Scripts\AlpineJs\*.js" Pack="true" PackagePath="scripts" />
   </ItemGroup>
 
   <PropertyGroup>

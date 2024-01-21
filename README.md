@@ -134,6 +134,10 @@ And voilà! You can test your component by clicking on the `Add` button.
 - [Moneybow](https://www.moneybow.app/)
 - ...
 
+## External libraries
+
+Hydro repository contains [Alpine.js](https://github.com/alpinejs/alpine) libraries MIT licensed.
+
 ## License
 
 Hydro is Copyright © Krzysztof Jeske and other contributors under the [MIT license](https://raw.githubusercontent.com/hydrostack/hydro/main/LICENSE)
