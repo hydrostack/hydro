@@ -20,13 +20,11 @@ so the encrypted data looks the same no matter which node generated it.
 
 ### Solution
 
-Use shared key storage to keep the key in one place. There are many kinds of storages you can use:
+Use a shared storage to keep the key in one place and available for all the nodes. There are several [kinds of storages](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/key-storage-providers) you can use:
 - Database
 - File system pointing to a network share
 - Azure Storage
 - Redis
-
-[Here](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/implementation/key-storage-providers) you can find the full list of the available storage providers.
 
 Example of configuration using Entity Framework Core:
 
