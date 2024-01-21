@@ -74,7 +74,7 @@ or via `Component`:
 or via `Component` with generic type:
 ```razor
 ...
-@await Component.Hydro<Counter>()
+@(await Component.Hydro<Counter>())
 ...
 ```
 
