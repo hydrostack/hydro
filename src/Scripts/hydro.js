@@ -553,6 +553,42 @@ document.addEventListener('alpine:init', () => {
       });
     });
   }).before('on');
+  
+  Alpine.directive('hydro-polling', Alpine.skipDuringClone((el, { value, expression, modifiers }, { effect, cleanup }) => {
+    let isQueued = false;
+    let interval;
+    const component = window.Hydro.findComponent(el);
+    const time = parseInt(modifiers[0].replace('ms', ''));
+
+    const setupInterval = () => {
+      interval = setInterval(async () => {
+        if (document.hidden) {
+          isQueued = true;
+          clearInterval(interval);
+          return;
+        }
+
+        await window.Hydro.hydroAction(el, component, { name: expression }, null);
+      }, time);
+    }
+
+    const handleVisibilityChange = async () => {
+      if (!document.hidden && isQueued) {
+        isQueued = false;
+        await window.Hydro.hydroAction(el, component, { name: expression });
+        setupInterval();
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    setupInterval();
+
+    cleanup(() => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(interval);
+    });
+
+  }));
 
   Alpine.directive('on-hydro-event', (el, { expression }, { effect, cleanup }) => {
     effect(() => {

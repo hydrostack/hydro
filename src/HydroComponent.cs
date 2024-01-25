@@ -28,6 +28,8 @@ public abstract class HydroComponent : ViewComponent
     private readonly ConcurrentDictionary<CacheKey, object> _requestCache = new();
     private static readonly ConcurrentDictionary<CacheKey, object> PersistentCache = new();
 
+    private static readonly ConcurrentDictionary<Type, List<HydroPoll>> Polls = new();
+
     private readonly List<HydroComponentEvent> _dispatchEvents = new();
     private readonly HashSet<HydroEventSubscription> _subscriptions = new();
 
@@ -72,6 +74,47 @@ public abstract class HydroComponent : ViewComponent
     public HydroComponent()
     {
         Subscribe<HydroBind>(data => SetPropertyValue(data.Name, data.Value));
+
+        ConfigurePolls();
+    }
+
+    private void ConfigurePolls()
+    {
+        var componentType = GetType();
+        
+        if (Polls.ContainsKey(componentType))
+        {
+            return;
+        }
+        
+        var methods = componentType
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+            .Where(m => m.DeclaringType != typeof(HydroComponent))
+            .Select(m => (Method: m, Attribute: m.GetCustomAttribute<PollAttribute>()))
+            .Where(m => m.Attribute != null)
+            .Select(m => (m.Method, m.Attribute, ParametersCount: m.Method.GetParameters().Length))
+            .ToList();
+
+        if (methods.Any(p => p.Method.GetBaseDefinition() != p.Method))
+        {
+            throw new InvalidOperationException("Poll can be defined only on custom actions");
+        }
+        
+        if (methods.Any(p => p.ParametersCount != 0))
+        {
+            throw new InvalidOperationException("Poll can be defined only on actions without parameters");
+        }
+            
+        if (methods.Any(p => p.Attribute.Interval <= 0))
+        {
+            throw new InvalidOperationException("Polling's interval is invalid");
+        }
+
+        var polls = methods
+            .Select(p => new HydroPoll(p.Method.Name, TimeSpan.FromMilliseconds(p.Attribute.Interval)))
+            .ToList();
+        
+        Polls.TryAdd(componentType, polls);
     }
 
     /// <summary>
@@ -193,7 +236,7 @@ public abstract class HydroComponent : ViewComponent
         Render();
         return Task.CompletedTask;
     }
-
+    
     /// <summary>
     /// Triggered before each render
     /// </summary>
@@ -368,6 +411,14 @@ public abstract class HydroComponent : ViewComponent
         var hydroAttribute = rootElement.SetAttributeValue("hydro", null);
         hydroAttribute.QuoteType = AttributeValueQuote.WithoutValue;
 
+        if (Polls.TryGetValue(GetType(), out var polls))
+        {
+            for (var i = 0; i < polls.Count; i++)
+            {
+                rootElement.AppendChild(GetPollScript(componentHtmlDocument, polls[i], i));
+            }
+        }
+        
         rootElement.AppendChild(GetModelScript(componentHtmlDocument, componentId, persistentState));
 
         foreach (var subscription in _subscriptions)
@@ -473,6 +524,14 @@ public abstract class HydroComponent : ViewComponent
         scriptNode.SetAttributeValue("hydro-event", "true");
         scriptNode.SetAttributeValue("x-data", "");
         scriptNode.SetAttributeValue("x-on-hydro-event", JsonConvert.SerializeObject(eventData));
+        return scriptNode;
+    }
+    
+    private HtmlNode GetPollScript(HtmlDocument document, HydroPoll poll, int index)
+    {
+        var scriptNode = document.CreateElement("script");
+        scriptNode.SetAttributeValue($"x-hydro-polling.{poll.Interval.TotalMilliseconds}ms._{index}", poll.Action);
+        scriptNode.SetAttributeValue("type", "text/hydro");
         return scriptNode;
     }
 
