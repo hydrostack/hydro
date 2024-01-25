@@ -428,50 +428,6 @@
 window.Hydro = new HydroCore();
 
 document.addEventListener('alpine:init', () => {
-  Alpine.directive('hydro-action', (el, { expression }, { effect, cleanup }) => {
-    effect(() => {
-      const customEvent = el.getAttribute('hydro-event');
-      const eventName = customEvent || (el.tagName === 'FORM' ? 'submit' : 'click');
-      const delay = el.getAttribute('hydro-delay');
-      const autorun = el.getAttribute('hydro-autorun');
-
-      if (autorun) {
-        setTimeout(() => window.Hydro.hydroAction(el), delay || 0)
-      } else {
-        const eventHandler = async (event) => {
-          event.preventDefault();
-          if (el.disabled) {
-            return;
-          }
-
-          setTimeout(() => window.Hydro.hydroAction(el, eventName), delay || 0)
-        };
-        el.addEventListener(eventName, eventHandler);
-        cleanup(() => {
-          el.removeEventListener(eventName, eventHandler);
-        });
-      }
-    });
-  });
-
-  Alpine.directive('hydro-on', (el, { value, expression }, { effect, cleanup }) => {
-    effect(() => {
-      const eventHandler = async (event) => {
-        event.preventDefault();
-        if (el.disabled) {
-          return;
-        }
-
-        setTimeout(() => window.Hydro.hydroAction(el, value, expression), 200)
-      };
-
-      el.addEventListener(value, eventHandler);
-      cleanup(() => {
-        el.removeEventListener(value, eventHandler);
-      });
-    });
-  });
-
   Alpine.directive('hydro-dispatch', (el, { expression }, { effect, cleanup }) => {
     effect(() => {
       if (!document.contains(el)) {
@@ -616,7 +572,6 @@ document.addEventListener('alpine:init', () => {
       });
     });
   });
-
 
   let currentBoostUrl;
 
