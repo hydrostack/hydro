@@ -6,6 +6,9 @@ hero:
   name: "Hydro"
   text: "Create .NET apps with SPA feeling without JS"
   tagline: Bring stateful and reactive components to ASP.NET Core without writing JavaScript
+  image:
+    src: /logo.svg
+    alt: Hydro
   actions:
     - theme: brand
       text: Get started

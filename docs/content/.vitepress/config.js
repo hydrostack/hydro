@@ -10,7 +10,6 @@ export default defineConfig({
       { text: 'Introduction', link: '/introduction/getting-started' },
       { text: 'Guide', link: '/features/components' }
     ],
-
     sidebar: [
       {
         text: 'Introduction',
@@ -55,7 +54,8 @@ export default defineConfig({
     ],
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/hydrostack/hydro/' }
+      { icon: 'github', link: 'https://github.com/hydrostack/hydro/' },
+      { icon: 'twitter', link: 'https://twitter.com/usehydro' },
     ]
   }
 })
