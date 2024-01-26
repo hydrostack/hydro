@@ -32,6 +32,7 @@ export default defineConfig({
           { text: 'Navigation', link: '/features/navigation' },
           { text: 'Authorization', link: '/features/authorization' },
           { text: 'Form validation', link: '/features/form-validation' },
+          { text: 'Long polling', link: '/features/long-polling' },
           { text: 'Errors handling', link: '/features/errors-handling' },
           { text: 'Anti-forgery token', link: '/features/xsrf-token' },
           { text: 'User interface utilities', link: '/features/ui-utils' },
