@@ -55,7 +55,7 @@ export default defineConfig({
 
     socialLinks: [
       { icon: 'github', link: 'https://github.com/hydrostack/hydro/' },
-      { icon: 'twitter', link: 'https://twitter.com/usehydro' },
+      // { icon: 'twitter', link: 'https://twitter.com/usehydro' },
     ]
   }
 })
