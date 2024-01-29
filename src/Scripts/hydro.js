@@ -498,8 +498,9 @@ document.addEventListener('alpine:init', () => {
 
         clearTimeout(timeout);
 
+        const target = event.currentTarget;
         timeout = setTimeout(async () => {
-          await window.Hydro.hydroBind(event.target);
+          await window.Hydro.hydroBind(target);
         }, debounce);
       };
 
@@ -579,15 +580,15 @@ document.addEventListener('alpine:init', () => {
     effect(() => {
       const handleClick = async (event) => {
         event.preventDefault();
-        const el = event.target;
-        const url = el.getAttribute('href');
+        const link = event.currentTarget;
+        const url = link.getAttribute('href');
         currentBoostUrl = url;
-        const classTimeout = setTimeout(() => el.classList.add('hydro-request'), 200);
+        const classTimeout = setTimeout(() => link.classList.add('hydro-request'), 200);
         try {
           await window.Hydro.loadPageContent(url, 'body', true, () => currentBoostUrl === url);
         } finally {
           clearTimeout(classTimeout);
-          el.classList.remove('hydro-request')
+          link.classList.remove('hydro-request')
         }
       };
 
