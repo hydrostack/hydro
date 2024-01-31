@@ -42,6 +42,10 @@
         let newContent = doc.querySelector(selector);
         let newTitle = doc.querySelector('head>title');
         element.innerHTML = newContent.innerHTML;
+        
+        if (selector === 'body'){
+          window.scrollTo(0, 0);
+        }
 
         if (newTitle) {
           document.title = newTitle.textContent;
