@@ -10,7 +10,7 @@ namespace Hydro.TagHelpers;
 /// <summary>
 /// Provides a binding from the DOM element to the Hydro action
 /// </summary>
-[HtmlTargetElement("hydro", Attributes = NameAttribute)]
+[HtmlTargetElement("hydro", Attributes = NameAttribute, TagStructure = TagStructure.WithoutEndTag)]
 public sealed class HydroComponentTagHelper : TagHelper
 {
     private const string NameAttribute = "name";
@@ -48,7 +48,7 @@ public sealed class HydroComponentTagHelper : TagHelper
         get => _parameters ??= new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         set => _parameters = value;
     }
-    
+
     /// <summary>
     /// Parameters passed to the component
     /// </summary>
@@ -82,7 +82,7 @@ public sealed class HydroComponentTagHelper : TagHelper
         ArgumentNullException.ThrowIfNull(output);
 
         output.TagName = null;
-        
+
         var viewComponentHelper = ViewContext.HttpContext.RequestServices.GetService<IViewComponentHelper>();
         ((IViewContextAware)viewComponentHelper).Contextualize(ViewContext);
 
@@ -91,7 +91,7 @@ public sealed class HydroComponentTagHelper : TagHelper
             parameters = Parameters ?? _parameters,
             key = Key
         });
-        
+
         output.Content.SetHtmlContent(componentHtml);
     }
 }
