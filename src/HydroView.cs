@@ -12,7 +12,7 @@ namespace Hydro;
 /// <summary>
 /// Abstraction for a Razor view
 /// </summary>
-public abstract class HydroTagHelper : TagHelper
+public abstract class HydroView : TagHelper
 {
     /// <summary />
     [HtmlAttributeNotBound]
@@ -62,10 +62,10 @@ public abstract class HydroTagHelper : TagHelper
         var compositeViewEngine = services.GetService<ICompositeViewEngine>();
         var modelMetadataProvider = services.GetService<IModelMetadataProvider>();
 
-        var tagHelperType = GetType();
+        var viewType = GetType();
         
-        var view = GetView(compositeViewEngine, tagHelperType)
-            ?? GetView(compositeViewEngine, tagHelperType, path => path.Replace("TagHelper.cshtml", ".cshtml"));
+        var view = GetView(compositeViewEngine, viewType)
+            ?? GetView(compositeViewEngine, viewType, path => path.Replace("TagHelper.cshtml", ".cshtml"));
         
         await using var writer = new StringWriter();
         var viewDataDictionary = new ViewDataDictionary(modelMetadataProvider, ModelState)
@@ -135,4 +135,10 @@ public abstract class HydroTagHelper : TagHelper
             targetProperty.SetValue(target, value);
         }
     }
+}
+
+/// <summary />
+[Obsolete("Use HydroView type instead")]
+public abstract class HydroTagHelper : HydroView
+{
 }

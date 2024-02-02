@@ -2,29 +2,30 @@
 outline: deep
 ---
 
-# View tag helpers
+# Hydro views
 
-View tag helpers are an extension built in into Hydro that let you create new kind of view components (called view tag helpers) that can replace partials, editors and regular view components.
+Hydro views are an extension built in into Hydro that let you create new kind of view components that can replace partials, editors and regular view components.
 
-Here is a basic example of a view tag helper called `Submit`:
+Here is a basic example of a Hydro view called `Submit`:
 
 ```c#
-// Submit.cshtml.cs
+// SubmitView.cshtml.cs
 
-public class SubmitTagHelper : HydroTagHelper;
+[HtmlTargetElement("submit")]
+public class Submit : HydroView;
 ```
 
 ```razor
 <!-- Submit.cshtml -->
 
-@model SubmitTagHelper
+@model Submit
 
 <button class="btn btn-primary" type="submit">
   Save
 </button>
 ```
 
-Now we can use our tag helper in any other razor view:
+Now we can use our Hydro view in any other razor view:
 
 ```razor
 <!-- SomeForm.cshtml -->
@@ -34,35 +35,43 @@ Now we can use our tag helper in any other razor view:
 
 ## Naming conventions
 
-View tag helpers follow the ASP.NET Mvc Tag Helpers naming conventions, which means when
-the view tag helper has suffix `TagHelper`, the prefix in kebab-case will be used as the tag name. Example:
+There are 3 ways of naming Hydro views:
 
-- `AlertTagHelper` gives `<alert />`.
-- `SubmitButtonTagHelper` gives `<submit-button />`.
+1. Manual naming with kebab-case:
 
-It's possible to not use the default convention and specify the tag names by using `[HtmlTargetElement]` attribute, for example:
+    ```c#
+    [HtmlTargetElement("submit-button")]
+    public class SubmitButton : HydroView;
+    ```
 
-```c#
-// SubmitButton.cshtml.cs
+   Usage: `<submit-button />`
 
-[HtmlTargetElement(nameof(SubmitButton))]
-public class SubmitButton : HydroTagHelper;
-```
+2. Manual naming with PascalCase using `nameof`:
 
-Usage:
+    ```c#
+    [HtmlTargetElement(nameof(SubmitButton))]
+    public class SubmitButton : HydroView;
+    ```
+  
+    Usage: `<SubmitButton />`
 
-```razor
-<SubmitButton />
-```
+3. Automatic naming using tag helpers naming convention (no `HtmlTargetElement` attribute):
+
+    ```c#
+    public class SubmitButtonTagHelper : HydroView;
+    ```
+
+    Usage: `<submit-button />`
 
 ## Parameters
 
-View tag helpers use parameters to pass the data from a caller to the view. Example:
+Hydro views use parameters to pass the data from a caller to the view. Example:
 
 ```c#
 // Alert.cshtml.cs
 
-public class AlertTagHelper : HydroTagHelper
+[HtmlTargetElement("alert")]
+public class Alert : HydroView
 {
     public string Message { get; set; }    
 }
@@ -71,14 +80,14 @@ public class AlertTagHelper : HydroTagHelper
 ```razor
 <!-- Alert.cshtml -->
 
-@model AlertTagHelper
+@model Alert
 
 <div class="alert">
   @Model.Message
 </div>
 ```
 
-Now we can set a value on the `message` attribute that will be passed to our `AlertTagHelper`:
+Now we can set a value on the `message` attribute that will be passed to our `Alert`:
 
 ```razor
 <!-- Index.cshtml -->
@@ -92,13 +101,14 @@ Parameter names are converted to kebab-case when used as attributes on tags, so:
 
 ## Dynamic attributes
 
-All attributes passed to the view tag helper by the caller are available in a view definition, even when they are not defined as properties.
+All attributes passed to the Hydro view by the caller are available in a view definition, even when they are not defined as properties.
 We can use this feature to pass optional html attributes to the view, for example:
 
 ```c#
 // Alert.cshtml.cs
 
-public class AlertTagHelper : HydroTagHelper
+[HtmlTargetElement("alert")]
+public class Alert : HydroView
 {
     public string Message { get; set; }    
 }
@@ -107,7 +117,7 @@ public class AlertTagHelper : HydroTagHelper
 ```razor
 <!-- Alert.cshtml -->
 
-@model AlertTagHelper
+@model Alert
 
 <div class="alert @Model.Attribute("class")">
   @Model.Message
@@ -124,12 +134,13 @@ Now we can set an optional attribute `class` that will be added to the final vie
 
 ## Child content
 
-View tag helpers support passing the child html content, so it can be used later when rendering the tag. Example:
+Hydro views support passing the child html content, so it can be used later when rendering the view. Example:
 
 ```c#
 // DisplayField.cshtml.cs
 
-public class DisplayFieldTagHelper : HydroTagHelper
+[HtmlTargetElement("display-field")]
+public class DisplayField : HydroView
 {
     public string Title { get; set; };
 }
@@ -138,7 +149,7 @@ public class DisplayFieldTagHelper : HydroTagHelper
 ```razor
 <!-- DisplayField.cshtml -->
 
-@model DisplayFieldTagHelper
+@model DisplayField
 
 <div class="display-field">
   <div class="display-field-title">
@@ -167,18 +178,19 @@ Remarks:
 
 ## Slots
 
-Slots are placeholders for html content inside view tag helpers that can be passed by the caller. Here is an example of a `Card` tag:
+Slots are placeholders for html content inside Hydro views that can be passed by the caller. Here is an example of a `Card` tag:
 
 ```c#
 // Card.cshtml.cs
 
-public class CardTagHelper : HydroTagHelper;
+[HtmlTargetElement("card")]
+public class Card : HydroView;
 ```
 
 ```razor
 <!-- Card.cshtml -->
 
-@model CardTagHelper
+@model Card
 
 <div class="card">
   <div class="card-header">
@@ -218,9 +230,9 @@ Remarks:
 - `Model.Slot("footer")` renders the content of passed through `<slot name=“footer”>`
 - `Model.Slot()` renders the rest of the child content
 
-## Differences between Hydro components and view tag helpers
+## Differences between Hydro components and Hydro views
 
-**View tag helpers:**
+**Hydro views:**
 - Used to render views.
 - Not stateful or interactive.
 - Replacement for partial views, editors or regular view components.
