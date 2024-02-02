@@ -32,6 +32,29 @@ Now we can use our tag helper in any other razor view:
 <submit />
 ```
 
+## Naming conventions
+
+View tag helpers follow the ASP.NET Mvc Tag Helpers naming conventions, which means when
+the view tag helper has suffix `TagHelper`, the prefix in kebab-case will be used as the tag name. Example:
+
+- `AlertTagHelper` gives `<alert />`.
+- `SubmitButtonTagHelper` gives `<submit-button />`.
+
+It's possible to not use the default convention and specify the tag names by using `[HtmlTargetElement]` attribute, for example:
+
+```c#
+// SubmitButton.cshtml.cs
+
+[HtmlTargetElement(nameof(SubmitButton))]
+public class SubmitButton : HydroTagHelper;
+```
+
+Usage:
+
+```razor
+<SubmitButton />
+```
+
 ## Parameters
 
 View tag helpers use parameters to pass the data from a caller to the view. Example:
@@ -194,36 +217,6 @@ Remarks:
 - `Model.Slot("header")` renders the content of passed through `<slot name=“header”>`
 - `Model.Slot("footer")` renders the content of passed through `<slot name=“footer”>`
 - `Model.Slot()` renders the rest of the child content
-
-## Naming conventions
-
-View tag helpers follow the ASP.NET Mvc Tag Helpers naming conventions, which means when
-the view tag helper has suffix `TagHelper`, the prefix in kebab-case will be used as the tag name. Example:
-
-- `AlertTagHelper` gives `<alert />`.
-- `DisplayFieldTagHelper` gives `<display-field />`.
-
-It's possible to not use the default convention and specify the tag names by using attributes, for example:
-
-```c#
-// DisplayField.cshtml.cs
-
-[HtmlTargetElement("DisplayField")]
-public class DisplayField : HydroTagHelper
-{
-    public string Title { get; set; };
-}
-```
-
-Usage:
-
-```razor
-<!-- SomePage.cshtml -->
-
-<DisplayField title="Price">
-  199 EUR
-</DisplayField>
-```
 
 ## Differences between Hydro components and view tag helpers
 
