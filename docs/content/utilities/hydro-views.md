@@ -9,7 +9,7 @@ Hydro views are an extension built in into Hydro that let you create new kind of
 Here is a basic example of a Hydro view called `Submit`:
 
 ```c#
-// SubmitView.cshtml.cs
+// Submit.cshtml.cs
 
 [HtmlTargetElement("submit")]
 public class Submit : HydroView;
