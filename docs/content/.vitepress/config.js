@@ -48,7 +48,7 @@ export default defineConfig({
       {
         text: 'Utilities',
         items: [
-          { text: 'View tag helpers', link: '/utilities/view-tag-helpers' },
+          { text: 'Hydro views', link: '/utilities/hydro-views' },
         ]
       },
       {
