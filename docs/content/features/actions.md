@@ -100,7 +100,7 @@ If your parameter type is a `string`, you can use a shorter version:
 Example:
 
 ```c#
-// RichContent.cshtml.cs
+// Content.cshtml.cs
 
 public class Content : HydroComponent
 {
