@@ -24,7 +24,7 @@ public sealed class HydroOnTagHelper : TagHelper
         get => _handlers ??= new Dictionary<string, Expression<Action>>(StringComparer.OrdinalIgnoreCase);
         set => _handlers = value;
     }
-    
+
     /// <summary>
     /// Disable during execution
     /// </summary>
@@ -48,7 +48,7 @@ public sealed class HydroOnTagHelper : TagHelper
         {
             return;
         }
-        
+
         foreach (var eventItem in _handlers)
         {
             var eventData = eventItem.Value.GetNameAndParameters();
@@ -57,22 +57,31 @@ public sealed class HydroOnTagHelper : TagHelper
             {
                 continue;
             }
-            
+
             var eventDefinition = eventItem.Key;
 
-            var invokeData = JsonConvert.SerializeObject(new
-            {
-                eventData.Value.Name,
-                eventData.Value.Parameters
-            }, JsonSettings.SerializerSettings);
+            var jsInvokeExpression = GetJsInvokeExpression(eventData.Value.Name, eventData.Value.Parameters);
 
             output.Attributes.RemoveAll(HandlersPrefix + eventDefinition);
-            output.Attributes.Add(new TagHelperAttribute($"x-on:{eventDefinition}", new HtmlString($"invoke($event, {invokeData})"), HtmlAttributeValueStyle.SingleQuotes));
+            output.Attributes.Add(new TagHelperAttribute($"x-on:{eventDefinition}", new HtmlString(jsInvokeExpression), HtmlAttributeValueStyle.SingleQuotes));
 
             if (Disable || new[] { "click", "submit" }.Any(e => e.StartsWith(e)))
             {
                 output.Attributes.Add(new("data-loading-disable"));
             }
         }
+    }
+
+    private static string GetJsInvokeExpression(string name, IDictionary<string, object> parameters)
+    {
+        var invokeJson = JsonConvert.SerializeObject(new
+        {
+            Name = name,
+            Parameters = parameters
+        }, JsonSettings.SerializerSettings);
+
+        var invokeJsObject = ExpressionExtensions.DecodeJsExpressionsInJson(invokeJson);
+
+        return $"invoke($event, {invokeJsObject})";
     }
 }

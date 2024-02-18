@@ -54,9 +54,9 @@ Examples:
 <input type="text" hydro-on:keyup.shift.enter="@(() => Model.Save())">
 ```
 
-## Arguments
+## Parameters
 
-If your action contains arguments, you can pass them in a regular way.
+If your action contains parameters, you can pass them in a regular way.
 
 Example:
 
@@ -85,6 +85,50 @@ public class Counter : HydroComponent
   </button>
 </div>
 ```
+
+## JavaScript expression as a parameter
+
+In some cases, like integrating with JavaScript libraries like maps, rich-text editors, etc. it might be useful to
+call a Hydro action with parameters evaluated on client side via JavaScript expression. You can use then `Param.JS<T>(string value)` method, where:
+- `T`: type of the parameter
+- `value`: JavaScript expression to evaluate
+
+If your parameter type is a `string`, you can use a shorter version:
+
+`Param.JS(string value)`
+
+Example:
+
+```c#
+// RichContent.cshtml.cs
+
+public class Content : HydroComponent
+{
+    public void Update(string value)
+    {
+        // ...
+    }
+}
+```
+
+```razor
+<!-- Content.cshtml -->
+
+@model Content
+<div>
+  <input type="text" id="myInput">
+  <button hydro-on:click="@(() => Model.Update(Param.JS("window.myInput.value")))">
+    Update content
+  </button>
+</div>
+```
+
+After clicking the button from the code above, Hydro will execute the expression
+`window.myInput.value` on the client side, and pass it as a `value` parameter to the `Update` action.
+
+> NOTE: In case of using widely this feature in your component, you can add:
+>
+> ```@using static Hydro.Param``` and call `JS` without `Param.` prefix.
 
 ## Asynchronous actions
 
