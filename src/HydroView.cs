@@ -36,9 +36,15 @@ public abstract class HydroView : TagHelper
     /// Renders slot content
     /// </summary>
     /// <param name="name">Name of the slot or null when main slot</param>
-    /// <returns></returns>
     public HtmlString Slot(string name = null) =>
         name == null ? _mainSlot : _slots.GetValueOrDefault(name);
+    
+    /// <summary>
+    /// Checks if given slot is defined
+    /// </summary>
+    /// <param name="name">Name of the slot</param>
+    public bool HasSlot(string name) =>
+        _slots.ContainsKey(name);
 
     /// <summary />
     public ModelStateDictionary ModelState => ViewContext.ViewData.ModelState;
@@ -127,7 +133,7 @@ public abstract class HydroView : TagHelper
 
             var value = sourceProperty.Value;
 
-            if (value != null && value.GetType() != targetProperty.PropertyType)
+            if (value != null && !targetProperty.PropertyType.IsInstanceOfType(value))
             {
                 throw new InvalidCastException($"Type mismatch in {sourceProperty.Key} parameter.");
             }

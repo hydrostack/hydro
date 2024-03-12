@@ -6,26 +6,28 @@
 /// <typeparam name="T">Type of cached value</typeparam>
 public class Cache<T>
 {
-    /// <summary>
-    /// Instantiates Cache
-    /// </summary>
-    /// <param name="value">Value to store</param>
-    public Cache(T value)
-    {
-        Value = value;
-        IsSet = true;
-    }
+    private T _value;
+    private readonly Func<T> _valueFunc;
 
     /// <summary>
     /// Value
     /// </summary>
-    public T Value { get; }
-    
+    public T Value => IsSet
+        ? _value
+        : _value = _valueFunc();
     
     /// <summary>
     /// Is value set
     /// </summary>
     public bool IsSet { get; private set; }
+    
+    /// <summary>
+    /// Instantiates Cache
+    /// </summary>
+    public Cache(Func<T> func)
+    {
+        _valueFunc = func;
+    }
 
     /// <summary>
     /// Reset value

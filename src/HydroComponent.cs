@@ -285,7 +285,7 @@ public abstract class HydroComponent : ViewComponent
             }
         }
 
-        var cacheValue = new Cache<T>(func());
+        var cacheValue = new Cache<T>(func);
         cache.TryAdd(cacheKey, cacheValue);
         return cacheValue;
     }
@@ -602,11 +602,27 @@ public abstract class HydroComponent : ViewComponent
         var orderedParameters = methodParameters
             .Select(p =>
             {
-                var sourceType = requestParameters[p.Name!].GetType();
+                var requestParameter = requestParameters[p.Name!];
 
-                return sourceType == p.ParameterType
-                    ? requestParameters[p.Name]
-                    : TypeDescriptor.GetConverter(p.ParameterType).ConvertFrom(requestParameters[p.Name]);
+                if (requestParameter == null)
+                {
+                    return null;
+                }
+                
+                var sourceType = requestParameter.GetType();
+
+                if (p.ParameterType == sourceType)
+                {
+                    return requestParameter;
+                }
+                else if (p.ParameterType.IsEnum)
+                {
+                    return Enum.ToObject(p.ParameterType, requestParameter);
+                }
+                else
+                {
+                    return TypeDescriptor.GetConverter(p.ParameterType).ConvertFrom(requestParameter);
+                }
             })
             .ToArray();
 
@@ -833,7 +849,7 @@ public abstract class HydroComponent : ViewComponent
 
             var value = sourceProperty.Value;
 
-            if (value != null && value.GetType() != targetProperty.PropertyType)
+            if (value != null && !targetProperty.PropertyType.IsInstanceOfType(value))
             {
                 throw new InvalidCastException($"Type mismatch in {sourceProperty.Key} parameter.");
             }
