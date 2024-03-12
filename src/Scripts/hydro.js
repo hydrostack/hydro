@@ -42,8 +42,8 @@
         let newContent = doc.querySelector(selector);
         let newTitle = doc.querySelector('head>title');
         element.innerHTML = newContent.innerHTML;
-        
-        if (selector === 'body'){
+
+        if (selector === 'body') {
           window.scrollTo(0, 0);
         }
 
@@ -293,6 +293,7 @@
 
             if (type !== 'event') {
               document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, { detail: { data: eventDetail } }));
+              document.dispatchEvent(new CustomEvent(`unhandled-hydro-error`, { detail: eventDetail }));
             }
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -325,6 +326,10 @@
                   skip();
                 } else {
                   if (from.tagName === "INPUT" && from.type === 'checkbox') {
+                    from.checked = to.checked;
+                  }
+
+                  if (from.tagName === "INPUT" && from.type === 'radio') {
                     from.checked = to.checked;
                   }
 
@@ -375,6 +380,8 @@
             }
           });
         }
+      } catch (error) {
+        document.dispatchEvent(new CustomEvent(`unhandled-hydro-error`, { detail: { name: error.name, message: error.message } }));
       } finally {
         setTimeout(() => {
           clearTimeout(classTimeout);
@@ -514,7 +521,7 @@ document.addEventListener('alpine:init', () => {
       });
     });
   }).before('on');
-  
+
   Alpine.directive('hydro-polling', Alpine.skipDuringClone((el, { value, expression, modifiers }, { effect, cleanup }) => {
     let isQueued = false;
     let interval;
@@ -624,7 +631,7 @@ document.addEventListener('alpine:init', () => {
         this.$component = window.Hydro.findComponent(this.$el);
       },
       async invoke(e, action) {
-        if (["click", "submit"].includes(e.type)) {
+        if (["click", "submit"].includes(e.type) && ['A', 'BUTTON'].includes(this.$el.tagName)) {
           e.preventDefault();
         }
         await window.Hydro.hydroAction(this.$el, this.$component, action, e);
