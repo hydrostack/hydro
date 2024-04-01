@@ -63,7 +63,7 @@ public abstract class HydroComponent : ViewComponent
     /// Determines if the whole model was accessed already
     /// </summary>
     public bool IsModelTouched { get; set; }
-    
+
     /// <summary>
     /// Determines if the current execution is related to the component mounting
     /// </summary>
@@ -81,12 +81,12 @@ public abstract class HydroComponent : ViewComponent
     private void ConfigurePolls()
     {
         var componentType = GetType();
-        
+
         if (Polls.ContainsKey(componentType))
         {
             return;
         }
-        
+
         var methods = componentType
             .GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Where(m => m.DeclaringType != typeof(HydroComponent))
@@ -99,12 +99,12 @@ public abstract class HydroComponent : ViewComponent
         {
             throw new InvalidOperationException("Poll can be defined only on custom actions");
         }
-        
+
         if (methods.Any(p => p.ParametersCount != 0))
         {
             throw new InvalidOperationException("Poll can be defined only on actions without parameters");
         }
-            
+
         if (methods.Any(p => p.Attribute.Interval <= 0))
         {
             throw new InvalidOperationException("Polling's interval is invalid");
@@ -113,7 +113,7 @@ public abstract class HydroComponent : ViewComponent
         var polls = methods
             .Select(p => new HydroPoll(p.Method.Name, TimeSpan.FromMilliseconds(p.Attribute.Interval)))
             .ToList();
-        
+
         Polls.TryAdd(componentType, polls);
     }
 
@@ -213,6 +213,11 @@ public abstract class HydroComponent : ViewComponent
     }
 
     /// <summary>
+    /// Provides actions that can be executed on client side
+    /// </summary>
+    public HydroClientActions Client { get; } = new();
+
+    /// <summary>
     /// Triggered once the component is mounted
     /// </summary>
     public virtual Task MountAsync()
@@ -236,7 +241,7 @@ public abstract class HydroComponent : ViewComponent
         Render();
         return Task.CompletedTask;
     }
-    
+
     /// <summary>
     /// Triggered before each render
     /// </summary>
@@ -335,7 +340,7 @@ public abstract class HydroComponent : ViewComponent
             ? await GenerateComponentHtml(componentId, persistentState)
             : string.Empty;
     }
-    
+
     private async Task<string> RenderOnlineNestedComponent(IPersistentState persistentState)
     {
         var componentId = GenerateComponentId(Key);
@@ -391,11 +396,11 @@ public abstract class HydroComponent : ViewComponent
     {
         var previousParentComponentId = HttpContext.Items[HydroConsts.Component.ParentComponentId];
         HttpContext.Items[HydroConsts.Component.ParentComponentId] = componentId;
-        
+
         var componentHtmlDocument = await GetComponentHtml();
-        
+
         HttpContext.Items[HydroConsts.Component.ParentComponentId] = previousParentComponentId;
-        
+
         var root = componentHtmlDocument.DocumentNode;
 
         if (root.ChildNodes.Count(n => n.NodeType == HtmlNodeType.Element) != 1)
@@ -418,7 +423,7 @@ public abstract class HydroComponent : ViewComponent
                 rootElement.AppendChild(GetPollScript(componentHtmlDocument, polls[i], i));
             }
         }
-        
+
         rootElement.AppendChild(GetModelScript(componentHtmlDocument, componentId, persistentState));
 
         foreach (var subscription in _subscriptions)
@@ -450,7 +455,7 @@ public abstract class HydroComponent : ViewComponent
         {
             var setter = PropertyInjector.GetPropertySetter(this, pair.Key, pair.Value);
             var propertyPath = PropertyPath.ExtractPropertyPath(pair.Key);
-            
+
             if (setter != null)
             {
                 var value = _options.ValueMappersDictionary.TryGetValue(setter.Value.Value.GetType(), out var mapper)
@@ -526,7 +531,7 @@ public abstract class HydroComponent : ViewComponent
         scriptNode.SetAttributeValue("x-on-hydro-event", JsonConvert.SerializeObject(eventData));
         return scriptNode;
     }
-    
+
     private HtmlNode GetPollScript(HtmlDocument document, HydroPoll poll, int index)
     {
         var scriptNode = document.CreateElement("script");
@@ -566,7 +571,7 @@ public abstract class HydroComponent : ViewComponent
         var methodInfos = GetType()
             .GetMethods(BindingFlags.Public | BindingFlags.Instance);
 
-        var requestParameters = GetParameters();
+        var requestParameters = (IDictionary<string, object>)HttpContext.Items[HydroConsts.ContextItems.Parameters];
 
         var methodInfo = methodInfos.FirstOrDefault(m =>
             string.Equals(m.Name, methodValue, StringComparison.OrdinalIgnoreCase)
@@ -608,7 +613,7 @@ public abstract class HydroComponent : ViewComponent
                 {
                     return null;
                 }
-                
+
                 var sourceType = requestParameter.GetType();
 
                 if (p.ParameterType == sourceType)
@@ -635,11 +640,6 @@ public abstract class HydroComponent : ViewComponent
             methodInfo.Invoke(this, orderedParameters);
         }
     }
-
-    private IDictionary<string, object> GetParameters() =>
-        HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.Parameters, out var parameters)
-            ? JsonConvert.DeserializeObject<Dictionary<string, object>>(parameters, JsonSerializerSettings)
-            : new Dictionary<string, object>();
 
     /// <summary>
     /// Get the payload transferred from previous page's component
@@ -669,9 +669,7 @@ public abstract class HydroComponent : ViewComponent
         var methodInfo = subscription.Action.Method;
         var parameters = methodInfo.GetParameters();
         var parameterType = parameters.First().ParameterType;
-        var model = HttpContext.Items.TryGetValue(HydroConsts.ContextItems.EventData, out var eventModel)
-            ? JsonConvert.DeserializeObject((string)eventModel!, parameterType)
-            : null;
+        var model = JsonConvert.DeserializeObject((string)HttpContext.Items[HydroConsts.ContextItems.EventData], parameterType);
 
         var operationId = HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.OperationId, out var incomingOperationId)
             ? incomingOperationId.First()
@@ -753,7 +751,7 @@ public abstract class HydroComponent : ViewComponent
     {
         using var stream = new MemoryStream();
         await using var writer = new StreamWriter(stream);
-        
+
         var previousWriter = ViewComponentContext.ViewContext.Writer;
         ViewComponentContext.ViewContext.Writer = writer;
         ViewComponentContext.ViewContext.CheckBoxHiddenInputRenderMode = CheckBoxHiddenInputRenderMode.None;
@@ -871,7 +869,7 @@ public abstract class HydroComponent : ViewComponent
     private bool ValidateTouched()
     {
         ModelState.Clear();
-        
+
         var context = new ValidationContext(this, serviceProvider: null, items: null);
         var validationResults = new List<ValidationResult>();
         Validator.TryValidateObject(this, context, validationResults, true);

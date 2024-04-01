@@ -59,63 +59,49 @@ internal static class HydroComponentsExtensions
             var htmlContent = await viewComponentHelper.InvokeAsync(componentType);
 
             var content = await GetHtml(htmlContent);
-            
+
             return Results.Content(content, MediaTypeNames.Text.Html);
         });
     }
 
     private static async Task ExecuteRequestOperations(HttpContext context, string method)
     {
-        var requestModel = context.Request.Headers[HydroConsts.RequestHeaders.Model];
-        var renderedComponentIDs = context.Request.Headers[HydroConsts.RequestHeaders.RenderedComponentIds];
-        context.Items.Add(HydroConsts.ContextItems.RenderedComponentIds, JsonConvert.DeserializeObject<string[]>(renderedComponentIDs));
-
-        if (!string.IsNullOrWhiteSpace(requestModel))
+        if (!context.Request.HasFormContentType)
         {
-            context.Items.Add(HydroConsts.ContextItems.BaseModel, requestModel.ToString());
+            throw new InvalidOperationException("Hydro form doesn't contain form which is required");
         }
 
-        if (!string.IsNullOrEmpty(method))
-        {
-            if (method == HydroConsts.Component.EventMethodName)
-            {
-                var eventName = context.Request.Headers[HydroConsts.RequestHeaders.EventName];
+        var hydroData = await context.Request.ReadFormAsync();
 
-                if (!string.IsNullOrWhiteSpace(eventName))
-                {
-                    context.Items.Add(HydroConsts.ContextItems.EventName, eventName.ToString());
-                }
-            }
-            else if (!string.IsNullOrWhiteSpace(method))
-            {
-                context.Items.Add(HydroConsts.ContextItems.MethodName, method);
-            }
-            else
-            {
-                context.Items.Add(HydroConsts.ContextItems.IsBind, true);
-            }
+        var formValues = hydroData
+            .Where(f => !f.Key.StartsWith("__hydro"))
+            .ToDictionary(f => f.Key, f => f.Value);
+        
+        var model = hydroData["__hydro_model"].First();
+        var type = hydroData["__hydro_type"].First();
+        var parameters = JsonConvert.DeserializeObject<Dictionary<string, object>>(hydroData["__hydro_parameters"].FirstOrDefault("{}"));
+        var eventData = JsonConvert.DeserializeObject<HydroEventPayload>(hydroData["__hydro_event"].FirstOrDefault(string.Empty));
+        var componentIds = JsonConvert.DeserializeObject<string[]>(hydroData["__hydro_componentIds"].FirstOrDefault("[]"));
+        var form = new FormCollection(formValues);
+
+        context.Items.Add(HydroConsts.ContextItems.RenderedComponentIds, componentIds);
+        context.Items.Add(HydroConsts.ContextItems.BaseModel, model);
+        context.Items.Add(HydroConsts.ContextItems.Parameters, parameters);
+
+        if (eventData != null)
+        {
+            context.Items.Add(HydroConsts.ContextItems.EventName, eventData.Name);
+            context.Items.Add(HydroConsts.ContextItems.EventData, eventData.Data);
         }
 
-        if (context.Request.HasFormContentType)
+        if (!string.IsNullOrWhiteSpace(method) && type != "event")
         {
-            var form = await context.Request.ReadFormAsync();
+            context.Items.Add(HydroConsts.ContextItems.MethodName, method);
+        }
+        
+        if (form.Any())
+        {
             context.Items.Add(HydroConsts.ContextItems.RequestForm, form);
-        }
-        else
-        {
-            var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
-
-            if (!string.IsNullOrWhiteSpace(body))
-            {
-                if (method == "event")
-                {
-                    context.Items.Add(HydroConsts.ContextItems.EventData, body);
-                }
-                else
-                {
-                    context.Items.Add(HydroConsts.ContextItems.RequestData, body);
-                }
-            }
         }
     }
 

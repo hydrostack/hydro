@@ -13,7 +13,7 @@ internal static class ExpressionExtensions
         {
             return null;
         }
-
+    
         var name = methodCall.Method.Name;
         var paramInfos = methodCall.Method.GetParameters();
         var arguments = methodCall.Arguments;
@@ -34,7 +34,7 @@ internal static class ExpressionExtensions
         return (name, parameters);
     }
 
-    private static object EvaluateExpressionValue(Expression expression)
+    internal static object EvaluateExpressionValue(Expression expression)
     {
         switch (expression)
         {
@@ -53,17 +53,24 @@ internal static class ExpressionExtensions
                      && callExpression.Arguments.Any()
                      && callExpression.Arguments[0] is ConstantExpression constantExpression:
 
-                return EncodeJsExpression(constantExpression.Value);
+                var value = ReplaceJsQuotes(constantExpression.Value?.ToString() ?? string.Empty);
+
+                return EncodeJsExpression(value);
 
             default:
                 throw new NotSupportedException("Unsupported expression type: " + expression.GetType().Name);
         }
     }
 
-    private static string EncodeJsExpression(object expression) =>
-        $"{JsIndicationStart}{expression}{JsIndicationEnd}";
-
+    internal static string ReplaceJsQuotes(string value) =>
+        value
+            .Replace("\"", "&quot;")
+            .Replace("'", "&apos;");
+    
     internal static string DecodeJsExpressionsInJson(string json) =>
         json.Replace("\"" + JsIndicationStart, "")
             .Replace(JsIndicationEnd + "\"", "");
+    
+    private static string EncodeJsExpression(object expression) =>
+        $"{JsIndicationStart}{expression}{JsIndicationEnd}";
 }
