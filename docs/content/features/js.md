@@ -15,7 +15,7 @@ the user experience. Those use cases usually refer to creating reusable componen
 In practice it shouldn't be many places where JS is used, but it's good to have
 an option to utilize it when needed.
 
-## Usage
+## Using Alpine.js
 
 Hydro is using [Alpine.js](https://alpinejs.dev/) as the backbone for handling all interactions on the client side,
 and it enables by default all the great features from that library. It means you can create
@@ -44,3 +44,19 @@ Example. Create local JS state and operate on it.
 ```
 
 The only limitation is that you can't set a custom `x-data` attribute on the root element, that's why in the above example a nested div is introduced.
+
+## Using Hydro extensions
+
+You can also invoke JavaScript code using [Hydro actions](/features/actions) together with `Model.Client.Invoke`:
+
+```razor
+@model Search
+
+<div>
+  <button
+    type="button"
+    hydro-on:click="@(() => Model.Client.Invoke("alert('test')"))">
+      Click me
+  </button>
+</div>
+```
