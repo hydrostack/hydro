@@ -548,7 +548,7 @@ public abstract class HydroComponent : ViewComponent
         }
 
         var data = _dispatchEvents
-            .Select(e => new { name = e.Name, data = e.Data, scope = e.Scope, operationId = e.OperationId })
+            .Select(e => new { name = e.Name, data = Base64.Serialize(e.Data), scope = e.Scope, operationId = e.OperationId })
             .ToList();
 
         HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.Trigger, JsonConvert.SerializeObject(data));
@@ -669,7 +669,7 @@ public abstract class HydroComponent : ViewComponent
         var methodInfo = subscription.Action.Method;
         var parameters = methodInfo.GetParameters();
         var parameterType = parameters.First().ParameterType;
-        var model = JsonConvert.DeserializeObject((string)HttpContext.Items[HydroConsts.ContextItems.EventData], parameterType);
+        var model = Base64.Deserialize((string)HttpContext.Items[HydroConsts.ContextItems.EventData], parameterType);
 
         var operationId = HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.OperationId, out var incomingOperationId)
             ? incomingOperationId.First()
