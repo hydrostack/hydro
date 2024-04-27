@@ -110,7 +110,7 @@
     const operationId = eventData.operationId;
     const hydroEvent = el.getAttribute("x-on-hydro-event");
     const wireEventData = JSON.parse(hydroEvent);
-    await hydroRequest(el, url, { eventData: { name: wireEventData.name, data: JSON.stringify(eventData.data) } }, 'event', wireEventData, operationId);
+    await hydroRequest(el, url, { eventData: { name: wireEventData.name, data: eventData.data } }, 'event', wireEventData, operationId);
   }
 
   async function hydroBind(el) {

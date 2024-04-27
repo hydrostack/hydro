@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Html;
+﻿using Hydro.Utils;
+using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
@@ -52,7 +53,7 @@ public sealed class HydroDispatchTagHelper : TagHelper
         var data = new
         {
             name = GetFullTypeName(Data.GetType()),
-            data = Data,
+            data = Base64.Serialize(Data),
             scope = Scope
         };
         
