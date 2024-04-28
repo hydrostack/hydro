@@ -7,7 +7,7 @@ internal static class ExpressionExtensions
     private const string JsIndicationStart = "HYDRO_JS(";
     private const string JsIndicationEnd = ")HYDRO_JS";
 
-    public static (string Name, IDictionary<string, object> Parameters)? GetNameAndParameters(this Expression<Action> expression)
+    public static (string Name, IDictionary<string, object> Parameters)? GetNameAndParameters(this LambdaExpression expression)
     {
         if (expression is not { Body: MethodCallExpression methodCall })
         {
@@ -40,7 +40,7 @@ internal static class ExpressionExtensions
         {
             case ConstantExpression constantExpression:
                 return constantExpression.Value;
-
+            
             case MemberExpression memberExpression:
                 var objectMember = Expression.Convert(memberExpression, typeof(object));
                 var getterLambda = Expression.Lambda<Func<object>>(objectMember);
