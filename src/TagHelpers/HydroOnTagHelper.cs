@@ -16,13 +16,13 @@ public sealed class HydroOnTagHelper : TagHelper
 {
     private const string HandlersPrefix = "hydro-on:";
 
-    private IDictionary<string, Expression<Action>> _handlers;
+    private IDictionary<string, Expression> _handlers;
 
     /// <summary />
     [HtmlAttributeName(DictionaryAttributePrefix = HandlersPrefix)]
-    public IDictionary<string, Expression<Action>> Handlers
+    public IDictionary<string, Expression> Handlers
     {
-        get => _handlers ??= new Dictionary<string, Expression<Action>>(StringComparer.OrdinalIgnoreCase);
+        get => _handlers ??= new Dictionary<string, Expression>(StringComparer.OrdinalIgnoreCase);
         set => _handlers = value;
     }
 
@@ -52,7 +52,12 @@ public sealed class HydroOnTagHelper : TagHelper
 
         foreach (var eventItem in _handlers)
         {
-            var jsExpression = GetJsExpression(eventItem.Value);
+            if (eventItem.Value is not LambdaExpression actionExpression)
+            {
+                throw new InvalidOperationException($"Wrong event handler statement in component for {modelType.Namespace}");
+            }
+            
+            var jsExpression = GetJsExpression(actionExpression);
 
             if (jsExpression == null)
             {
@@ -70,7 +75,7 @@ public sealed class HydroOnTagHelper : TagHelper
         }
     }
 
-    private static string GetJsExpression(Expression<Action> expression)
+    private static string GetJsExpression(LambdaExpression expression)
     {
         var clientAction = GetJsClientActionExpression(expression);
 
@@ -82,7 +87,7 @@ public sealed class HydroOnTagHelper : TagHelper
         return GetJsInvokeExpression(expression);
     }
 
-    private static string GetJsClientActionExpression(Expression<Action> expression)
+    private static string GetJsClientActionExpression(LambdaExpression expression)
     {
         if (expression is not { Body: MethodCallExpression methodCall }
             || methodCall.Method.DeclaringType != typeof(HydroClientActions))
@@ -101,7 +106,7 @@ public sealed class HydroOnTagHelper : TagHelper
         }
     }
 
-    private static string GetJsInvokeExpression(Expression<Action> expression)
+    private static string GetJsInvokeExpression(LambdaExpression expression)
     {
         var eventData = expression.GetNameAndParameters();
 
