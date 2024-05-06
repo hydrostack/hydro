@@ -32,7 +32,7 @@
           message: "Problem with loading the content",
           data: null
         }
-        document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, { detail: { data: eventDetail } }));
+        document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, { detail: { data: toBase64Json(eventDetail) } }));
         throw new Error(`HTTP error! status: ${response.status}`);
       } else {
         let data = await response.text();
@@ -128,16 +128,34 @@
 
     if (!binding[component.id]) {
       binding[component.id] = {
-        formData: new FormData()
+        formData: new FormData(),
+        operationId: generateGuid()
       };
+    }
+
+    const formData = binding[component.id].formData;
+    const bindAlreadyInitialized = [...formData].length !== 0;
+
+    if (!bindAlreadyInitialized) {
+      binding[component.id].operationId = generateGuid();
     }
 
     let propertyName = el.getAttribute('name');
 
-    const value = el.tagName === "INPUT" && el.type === 'checkbox' ? el.checked : el.value;
-    const bindAlreadyInitialized = [...binding[component.id].formData].length !== 0;
+    if (el.tagName === "INPUT" && el.type === 'checkbox') {
+      formData.set(propertyName, el.checked);
+    } else if (el.tagName === "INPUT" && el.type === 'file') {
+      if (el.files.length) {
+        formData.set(propertyName, el.files[0]);
+      } else {
+        formData.set(propertyName, new Blob(), '');
+      }
+    } else {
+      formData.set(propertyName, el.value);
+    }
 
-    binding[component.id].formData.set(propertyName, value);
+    el.setAttribute("hydro-operation-id", binding[component.id].operationId);
+    el.classList.add('hydro-request');
 
     if (bindAlreadyInitialized) {
       return Promise.resolve();
@@ -151,7 +169,7 @@
       binding[component.id].timeout = setTimeout(async () => {
         const requestFormData = binding[component.id].formData;
         // binding[url].formData = new FormData();
-        const bindOperationId = generateGuid();
+        const bindOperationId = binding[component.id].operationId;
         dirty[propertyName] = bindOperationId;
         await hydroRequest(el, url, { formData: requestFormData }, 'bind', null, bindOperationId);
         if (dirty[propertyName] === bindOperationId) {
@@ -201,7 +219,7 @@
     let disableTimer;
     let classTimeout;
 
-    if (operationId) {
+    if (operationId && type !== 'bind') {
       if (!operationStatus[operationId]) {
         operationStatus[operationId] = 0;
 
@@ -215,7 +233,7 @@
 
       operationStatus[operationId]++;
     }
-    
+
     await enqueueHydroPromise(componentId, async () => {
       try {
         let headers = {
@@ -265,7 +283,7 @@
             config.Antiforgery.Token = json.token;
           } else if (response.status === 403) {
             if (type !== 'event') {
-              document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, { detail: { data: { message: "Unauthorized access" } } }));
+              document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, { detail: { data: toBase64Json({ message: "Unauthorized access" }) } }));
             }
             throw new Error(`HTTP error! status: ${response.status}`);
           } else {
@@ -285,7 +303,7 @@
             }
 
             if (type !== 'event') {
-              document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, { detail: { data: eventDetail } }));
+              document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, { detail: { data: toBase64Json(eventDetail) } }));
               document.dispatchEvent(new CustomEvent(`unhandled-hydro-error`, { detail: eventDetail }));
             }
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -301,11 +319,20 @@
               updating: (from, to, childrenOnly, skip) => {
                 if (counter !== 0 && to.getAttribute && to.getAttribute("hydro") !== null && from.getAttribute && from.getAttribute("hydro") !== null) {
                   if (to.getAttribute("hydro-placeholder") !== null) {
+                    // hydro component placeholder, so skipping
                     skip();
+                    counter++;
+                    return;
                   }
                 }
 
                 if (from.getAttribute && from.getAttribute("hydro-operation-id")) {
+                  if (type === 'bind' && operationId !== from.getAttribute("hydro-operation-id")) {
+                    skip();
+                    counter++;
+                    return;
+                  }
+
                   to.setAttribute("hydro-operation-id", from.getAttribute("hydro-operation-id"));
                   to.disabled = from.disabled;
                   if (from.classList.contains('hydro-request')) {
@@ -317,6 +344,8 @@
 
                 if (fieldName && dirty[fieldName] && dirty[fieldName] !== operationId) {
                   skip();
+                  counter++;
+                  return;
                 } else {
                   if (from.tagName === "INPUT" && from.type === 'checkbox') {
                     from.checked = to.checked;
@@ -381,12 +410,14 @@
           clearTimeout(disableTimer);
 
           if (operationId) {
-            const operationTrigger = document.querySelector(`[hydro-operation-id="${operationId}"]`);
+            const operationTrigger = document.querySelectorAll(`[hydro-operation-id="${operationId}"]`);
             operationStatus[operationId]--;
 
-            if (operationTrigger && operationStatus[operationId] <= 0) {
-              operationTrigger.disabled = false;
-              operationTrigger.classList.remove('hydro-request');
+            if (operationTrigger.length && (operationStatus[operationId] <= 0 || type === 'bind')) {
+              operationTrigger.forEach(trigger => {
+                trigger.disabled = false;
+                trigger.classList.remove('hydro-request');
+              })
             }
           }
         }, 20); // make sure it's delayed more than 0 and less than 50
@@ -400,10 +431,12 @@
       if (element.checked !== element.defaultChecked) {
         return true;
       }
-    } else if (['hidden', 'password', 'text', 'textarea', 'number'].includes(type)) {
+    } else if (['hidden', 'password', 'text', 'textarea', 'number', 'date'].includes(type)) {
       if (element.value !== element.defaultValue) {
         return true;
       }
+    } else if (['file'].includes(type)) {
+      return true;
     } else if (["select-one", "select-multiple"].includes(type)) {
       for (let j = 0; j < element.options.length; j++) {
         if (element.options[j].selected !== element.options[j].defaultSelected) {
@@ -411,6 +444,12 @@
         }
       }
     }
+  }
+
+  function toBase64Json(value) {
+    return value !== null && value !== undefined
+      ? btoa(String.fromCodePoint(...new TextEncoder().encode(JSON.stringify(value))))
+      : null;
   }
 
   window.addEventListener('popstate', async function () {

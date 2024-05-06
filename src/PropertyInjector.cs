@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
@@ -89,7 +90,7 @@ internal static class PropertyInjector
         propertyInfo.SetValue(currentObject, convertedValue);
     }
 
-    public static (object Value, Action<object> Setter)? GetPropertySetter(object target, string propertyPath, StringValues value)
+    public static (object Value, Action<object> Setter)? GetPropertySetter(object target, string propertyPath, object value)
     {
         if (target == null)
         {
@@ -177,7 +178,7 @@ internal static class PropertyInjector
         return (Convert.ToInt32(iteratorValue), cleanedPropName);
     }
 
-    private static (object, Action<object>)? SetValueOnObject(object obj, string propName, StringValues valueToSet)
+    private static (object, Action<object>)? SetValueOnObject(object obj, string propName, object valueToSet)
     {
         if (obj == null)
         {
@@ -205,7 +206,7 @@ internal static class PropertyInjector
         return (convertedValue, val => propertyInfo.SetValue(obj, val));
     }
 
-    private static (object, Action<object>)? SetIndexedValue(object obj, string propName, StringValues valueToSet)
+    private static (object, Action<object>)? SetIndexedValue(object obj, string propName, object valueToSet)
     {
         var (index, cleanedPropName) = GetIndexAndCleanedPropertyName(propName);
         var propertyInfo = obj.GetType().GetProperty(cleanedPropName);
@@ -241,15 +242,26 @@ internal static class PropertyInjector
         throw new InvalidOperationException($"Indexed access for property '{cleanedPropName}' is not supported.");
     }
 
-    private static object ConvertValue(StringValues valueToConvert, Type destinationType)
+    private static object ConvertValue(object valueToConvert, Type destinationType)
     {
-        var converter = TypeDescriptor.GetConverter(destinationType);
+        if (valueToConvert is not StringValues stringValues)
+        {
+            return valueToConvert;
+        }
+        
+        if (typeof(IFormFile).IsAssignableFrom(destinationType) && StringValues.IsNullOrEmpty(stringValues))
+        {
+            return null;
+        }
+
+        var converter = TypeDescriptor.GetConverter(destinationType!);
+   
         if (!converter.CanConvertFrom(typeof(string)))
         {
             throw new InvalidOperationException($"Cannot convert StringValues to '{destinationType}'.");
         }
 
-        if (!destinationType.IsArray || valueToConvert.Count <= 1)
+        if (!destinationType.IsArray || stringValues is { Count: <= 1 })
         {
             try
             {
@@ -262,12 +274,12 @@ internal static class PropertyInjector
         }
 
         var elementType = destinationType.GetElementType();
-        var array = Array.CreateInstance(elementType, valueToConvert.Count);
-        for (var i = 0; i < valueToConvert.Count; i++)
+        var array = Array.CreateInstance(elementType, stringValues.Count);
+        for (var i = 0; i < stringValues.Count; i++)
         {
             try
             {
-                array.SetValue(converter.ConvertFromString(valueToConvert[i]), i);
+                array.SetValue(converter.ConvertFromString(stringValues[i]), i);
             }
             catch
             {
