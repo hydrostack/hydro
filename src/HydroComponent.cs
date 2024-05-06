@@ -458,12 +458,30 @@ public abstract class HydroComponent : ViewComponent
 
             if (setter != null)
             {
-                var value = _options.ValueMappersDictionary.TryGetValue(setter.Value.Value.GetType(), out var mapper)
-                    ? await mapper.Map(setter.Value.Value)
-                    : setter.Value.Value;
+                var value = setter.Value.Value == null
+                    ? null
+                    : _options.ValueMappersDictionary.TryGetValue(setter.Value.Value.GetType(), out var mapper)
+                        ? await mapper.Map(setter.Value.Value)
+                        : setter.Value.Value;
 
                 setter.Value.Setter(value);
                 await BindAsync(propertyPath, value);
+            }
+            else
+            {
+                await BindAsync(propertyPath, null);
+            }
+        }
+
+        foreach (var file in formCollection.Files)
+        {
+            var setter = PropertyInjector.GetPropertySetter(this, file.Name, file);
+            var propertyPath = PropertyPath.ExtractPropertyPath(file.Name);
+
+            if (setter != null)
+            {
+                setter.Value.Setter(file);
+                await BindAsync(propertyPath, file);
             }
             else
             {
@@ -620,14 +638,13 @@ public abstract class HydroComponent : ViewComponent
                 {
                     return requestParameter;
                 }
-                else if (p.ParameterType.IsEnum)
+
+                if (p.ParameterType.IsEnum)
                 {
                     return Enum.ToObject(p.ParameterType, requestParameter);
                 }
-                else
-                {
-                    return TypeDescriptor.GetConverter(p.ParameterType).ConvertFrom(requestParameter);
-                }
+
+                return TypeDescriptor.GetConverter(p.ParameterType).ConvertFrom(requestParameter);
             })
             .ToArray();
 
