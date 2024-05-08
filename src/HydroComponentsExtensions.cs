@@ -98,6 +98,7 @@ internal static class HydroComponentsExtensions
         {
             context.Items.Add(HydroConsts.ContextItems.EventName, eventData.Name);
             context.Items.Add(HydroConsts.ContextItems.EventData, eventData.Data);
+            context.Items.Add(HydroConsts.ContextItems.EventSubject, eventData.Subject);
         }
 
         if (!string.IsNullOrWhiteSpace(method) && type != "event")

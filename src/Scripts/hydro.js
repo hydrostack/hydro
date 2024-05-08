@@ -110,7 +110,7 @@
     const operationId = eventData.operationId;
     const hydroEvent = el.getAttribute("x-on-hydro-event");
     const wireEventData = JSON.parse(hydroEvent);
-    await hydroRequest(el, url, { eventData: { name: wireEventData.name, data: eventData.data } }, 'event', wireEventData, operationId);
+    await hydroRequest(el, url, { eventData: { name: wireEventData.name, data: eventData.data, subject: eventData.subject } }, 'event', wireEventData, operationId);
   }
 
   async function hydroBind(el) {
@@ -393,11 +393,17 @@
                 const eventData = {
                   detail: {
                     data: trigger.data,
+                    subject: trigger.subject,
                     operationId: trigger.operationId
                   }
                 };
 
                 document.dispatchEvent(new CustomEvent(eventName, eventData));
+
+                if (trigger.subject) {
+                  const subjectEventName = `${eventScope}:${trigger.name}:${trigger.subject}`;
+                  document.dispatchEvent(new CustomEvent(subjectEventName, eventData));
+                }
               });
             }
           });
@@ -598,8 +604,8 @@ document.addEventListener('alpine:init', () => {
       }
 
       const data = JSON.parse(expression);
-      const globalEventName = `global:${data.name}`;
-      const localEventName = `${component.id}:${data.name}`;
+      const globalEventName = data.subject ? `global:${data.name}:${data.subject}` : `global:${data.name}`;
+      const localEventName = data.subject ? `${component.id}:${data.name}:${data.subject}` : `${component.id}:${data.name}`;
       const eventPath = data.path;
 
       const eventHandler = async (event) => {
