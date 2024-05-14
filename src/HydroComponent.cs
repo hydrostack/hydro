@@ -143,10 +143,11 @@ public abstract class HydroComponent : ViewComponent
     /// Subscribes to a Hydro event
     /// </summary>
     /// <typeparam name="TEvent">Event type</typeparam>
-    public void Subscribe<TEvent>() =>
+    public void Subscribe<TEvent>(Func<string> subject = null) =>
         _subscriptions.Add(new HydroEventSubscription
         {
             EventName = GetFullTypeName(typeof(TEvent)),
+            SubjectRetriever = subject,
             Action = (TEvent _) => { }
         });
 
@@ -159,6 +160,20 @@ public abstract class HydroComponent : ViewComponent
         _subscriptions.Add(new HydroEventSubscription
         {
             EventName = GetFullTypeName(typeof(TEvent)),
+            Action = action
+        });
+
+    /// <summary>
+    /// Subscribes to a Hydro event
+    /// </summary>
+    /// <param name="subject">Subject</param>
+    /// <param name="action">Action to execute when event occurs</param>
+    /// <typeparam name="TEvent">Event type</typeparam>
+    public void Subscribe<TEvent>(Func<string> subject, Action<TEvent> action) =>
+        _subscriptions.Add(new HydroEventSubscription
+        {
+            EventName = GetFullTypeName(typeof(TEvent)),
+            SubjectRetriever = subject,
             Action = action
         });
 
@@ -180,6 +195,20 @@ public abstract class HydroComponent : ViewComponent
         });
 
     /// <summary>
+    /// Subscribes to a Hydro event
+    /// </summary>
+    /// <param name="subject">Subject</param>
+    /// <param name="action">Action to execute when event occurs</param>
+    /// <typeparam name="TEvent">Event type</typeparam>
+    public void Subscribe<TEvent>(Func<string> subject, Func<TEvent, Task> action) =>
+        _subscriptions.Add(new HydroEventSubscription
+        {
+            EventName = GetFullTypeName(typeof(TEvent)),
+            Action = action,
+            SubjectRetriever = subject
+        });
+
+    /// <summary>
     /// Triggers a Hydro event
     /// </summary>
     /// <param name="data">Data to pass</param>
@@ -195,9 +224,10 @@ public abstract class HydroComponent : ViewComponent
     /// <param name="name">Name of the event</param>
     /// <param name="data">Data to pass</param>
     /// <param name="scope">Scope of the event</param>
+    /// <param name="subject">Subject</param>
     /// <param name="asynchronous">Do not chain the execution of handlers and run them separately</param>
     /// <typeparam name="TEvent">Event type</typeparam>
-    public void Dispatch<TEvent>(string name, TEvent data, Scope scope = Scope.Parent, bool asynchronous = false)
+    public void Dispatch<TEvent>(string name, TEvent data, Scope scope = Scope.Parent, bool asynchronous = false, string subject = null)
     {
         var operationId = !asynchronous && HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.OperationId, out var incomingOperationId)
             ? incomingOperationId.First()
@@ -208,9 +238,20 @@ public abstract class HydroComponent : ViewComponent
             Name = name,
             Data = data,
             Scope = scope.ToString().ToLower(),
+            Subject = subject,
             OperationId = operationId
         });
     }
+
+    /// <summary>
+    /// Triggers a Hydro event in a global scope
+    /// </summary>
+    /// <param name="data">Data to pass</param>
+    /// <param name="subject">Subject</param>
+    /// <param name="asynchronous">Do not chain the execution of handlers and run them separately</param>
+    /// <typeparam name="TEvent">Event type</typeparam>
+    public void DispatchGlobal<TEvent>(TEvent data, string subject = null, bool asynchronous = false) =>
+        Dispatch(GetFullTypeName(typeof(TEvent)), data, Scope.Global, asynchronous, subject);
 
     /// <summary>
     /// Provides actions that can be executed on client side
@@ -232,7 +273,7 @@ public abstract class HydroComponent : ViewComponent
     public virtual void Mount()
     {
     }
-
+    
     /// <summary>
     /// Triggered before each render
     /// </summary>
@@ -538,6 +579,7 @@ public abstract class HydroComponent : ViewComponent
         var eventData = new
         {
             name = subscription.EventName,
+            subject = subscription.SubjectRetriever?.Invoke(),
             path = $"/hydro/{GetType().Name}/event".ToLower()
         };
 
@@ -566,7 +608,14 @@ public abstract class HydroComponent : ViewComponent
         }
 
         var data = _dispatchEvents
-            .Select(e => new { name = e.Name, data = Base64.Serialize(e.Data), scope = e.Scope, operationId = e.OperationId })
+            .Select(e => new
+            {
+                name = e.Name,
+                data = Base64.Serialize(e.Data),
+                scope = e.Scope,
+                subject = e.Subject,
+                operationId = e.OperationId
+            })
             .ToList();
 
         HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.Trigger, JsonConvert.SerializeObject(data));
@@ -676,35 +725,36 @@ public abstract class HydroComponent : ViewComponent
             return;
         }
 
-        var subscription = _subscriptions.FirstOrDefault(s => s.EventName == eventNameValue);
+        var eventSubject = (string)HttpContext.Items[HydroConsts.ContextItems.EventSubject];
+        var subscriptions = _subscriptions
+            .Where(s => s.EventName == eventNameValue && (s.SubjectRetriever == null || s.SubjectRetriever() == eventSubject))
+            .ToList();
 
-        if (subscription == null)
+        foreach (var subscription in subscriptions)
         {
-            return;
-        }
+            var methodInfo = subscription.Action.Method;
+            var parameters = methodInfo.GetParameters();
+            var parameterType = parameters.First().ParameterType;
+            var model = Base64.Deserialize((string)HttpContext.Items[HydroConsts.ContextItems.EventData], parameterType);
 
-        var methodInfo = subscription.Action.Method;
-        var parameters = methodInfo.GetParameters();
-        var parameterType = parameters.First().ParameterType;
-        var model = Base64.Deserialize((string)HttpContext.Items[HydroConsts.ContextItems.EventData], parameterType);
+            var operationId = HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.OperationId, out var incomingOperationId)
+                ? incomingOperationId.First()
+                : Guid.NewGuid().ToString("N");
 
-        var operationId = HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.OperationId, out var incomingOperationId)
-            ? incomingOperationId.First()
-            : Guid.NewGuid().ToString("N");
+            HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.OperationId, operationId);
 
-        HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.OperationId, operationId);
+            var isAsync = typeof(Task).IsAssignableFrom(methodInfo.ReturnType);
 
-        var isAsync = typeof(Task).IsAssignableFrom(methodInfo.ReturnType);
-
-        if (isAsync)
-        {
-            var method = InvokeActionAsyncMethod.MakeGenericMethod(parameterType);
-            await (Task)method.Invoke(null, new[] { subscription.Action, model })!;
-        }
-        else
-        {
-            var method = InvokeActionMethod.MakeGenericMethod(parameterType);
-            method.Invoke(null, new[] { subscription.Action, model });
+            if (isAsync)
+            {
+                var method = InvokeActionAsyncMethod.MakeGenericMethod(parameterType);
+                await (Task)method.Invoke(null, new[] { subscription.Action, model })!;
+            }
+            else
+            {
+                var method = InvokeActionMethod.MakeGenericMethod(parameterType);
+                method.Invoke(null, new[] { subscription.Action, model });
+            }
         }
     }
 

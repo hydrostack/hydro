@@ -27,6 +27,7 @@ internal static class HydroConsts
         public const string RequestForm = "hydro-request-form";
         public const string Parameters = "hydro-parameters";
         public const string EventData = "hydro-event-model";
+        public const string EventSubject = "hydro-event-subject";
         public const string IsRootRendered = "hydro-root-rendered";
     }
 

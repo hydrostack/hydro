@@ -145,13 +145,19 @@ public void Add()
 `Add` triggers the event asynchronously, so the button that triggers this action will be disabled until the action is done. The event execution won't be connected with the action's pipeline and will be run on its own.
 
 
-## Events scope
+## Event scope
 
 By default, the events are dispatched only to their parent component. To publish a global event use the following
 method:
 
 ```c#
 Dispatch(new ShowMessage(Content), Scope.Global);
+```
+
+or
+
+```c#
+DispatchGlobal(new ShowMessage(Content));
 ```
 
 Any component that subscribes for `ShowMessage` will be notified, no matter the component's location.
@@ -194,3 +200,62 @@ public class ProductList : HydroComponent
     }
 }
 ```
+
+## Event subject
+
+There might be a situation where you want to filter the events you receive in your subscription handler. It means that
+your component subscribes to an event, but handles it only when it contains a certain flag. That flag can be any string
+and is called a `subject`.
+
+You can imagine a page with multiple lists of todos. Each list is a Hydro component that listens to events like `TodoAdded`,
+`TodoRemoved` or `TodoEdited`. When a todo is removed on one list, you don't want all the other lists to receive and react to that event, but only
+the list that contained that todo item. This is solved in Hydro by using `subject` parameter, which in this case will be the list's id.
+When `TodoAdded`, `TodoRemoved` or `TodoEdited` are dispatched, `subject` is set to their list's id. The list component subscribes to those
+events with `subject` set to the their list's id.
+
+Example:
+
+```c#
+// Todo.cshtml.cs
+
+public class Todo : HydroComponent
+{
+    public string TodoId { get; set; }
+    public string ListId { get; set; }
+    public string Text { get; set; }
+    public bool IsDone { get; set; }
+    
+    public void Remove(string id)
+    {
+        DispatchGlobal(new TodoRemoved { TodoId }, subject: ListId);
+    }
+}
+```
+
+```c#
+// TodoList.cshtml.cs
+
+public class TodoList : HydroComponent
+{
+    public string ListId { get; set; }
+    public List<Todo> Todos { get; set; }
+    
+    public TodoList()
+    {
+        Subscribe<TodoRemoved>(subject: () => ListId, Handle);
+    }
+    
+    public void Handle(TodoRemoved data)
+    {
+        // will be called only when subject is ListId
+        Todos.RemoveAll(todo => todo.TodoId == data.TodoId);
+    }
+}
+```
+
+In `Subscribe` method call `subject` parameter is a `Func<string>` instead of `string`, 
+because its value could be taken from component's properties that are not set yet, since it's
+a constructor.
+
+> NOTE: If you subscribe for an event without specifying the subject, it will catch all the events
+of that type, no matter if they were dispatched with subject or not.
