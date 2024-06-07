@@ -668,7 +668,7 @@ document.addEventListener('alpine:init', () => {
         this.$component = window.Hydro.findComponent(this.$el);
       },
       async invoke(e, action) {
-        if (["click", "submit"].includes(e.type) && ['A', 'BUTTON'].includes(this.$el.tagName)) {
+        if (["click", "submit"].includes(e.type) && ['A', 'BUTTON', 'FORM'].includes(this.$el.tagName)) {
           e.preventDefault();
         }
         await window.Hydro.hydroAction(this.$el, this.$component, action);
