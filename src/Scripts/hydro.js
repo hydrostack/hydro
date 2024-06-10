@@ -113,7 +113,7 @@
     await hydroRequest(el, url, { eventData: { name: wireEventData.name, data: eventData.data, subject: eventData.subject } }, 'event', wireEventData, operationId);
   }
 
-  async function hydroBind(el) {
+  async function hydroBind(el, debounce) {
     if (!isElementDirty(el)) {
       return;
     }
@@ -165,7 +165,8 @@
       clearTimeout(binding[component.id].timeout);
     }
 
-    return await new Promise(resolve => {
+    
+    binding[component.id].promise = new Promise(resolve => {
       binding[component.id].timeout = setTimeout(async () => {
         const requestFormData = binding[component.id].formData;
         // binding[url].formData = new FormData();
@@ -176,8 +177,10 @@
           delete dirty[propertyName];
         }
         resolve();
-      }, 10);
+      }, Math.max(debounce, 10));
     });
+
+    return binding[component.id].promise;
   }
 
   async function hydroAction(el, component, action) {
@@ -232,6 +235,12 @@
       }
 
       operationStatus[operationId]++;
+    }
+
+    if (type === 'action') {
+      if (binding[componentId]?.promise) {
+        await binding[componentId].promise;
+      }
     }
 
     await enqueueHydroPromise(componentId, async () => {
@@ -327,7 +336,7 @@
                 }
 
                 if (from.getAttribute && from.getAttribute("hydro-operation-id")) {
-                  if (type === 'bind' && operationId !== from.getAttribute("hydro-operation-id")) {
+                  if (type === 'bind' && operationId !== from.getAttribute("hydro-operation-id") && from.getAttribute("hydro") === null) {
                     skip();
                     counter++;
                     return;
@@ -423,6 +432,7 @@
               operationTrigger.forEach(trigger => {
                 trigger.disabled = false;
                 trigger.classList.remove('hydro-request');
+                trigger.removeAttribute('hydro-operation-id');
               })
             }
           }
@@ -490,10 +500,6 @@ document.addEventListener('alpine:init', () => {
 
       const eventName = el.getAttribute('hydro-event') || 'click';
 
-      if (!component.element.parentElement) {
-        debugger;
-      }
-
       const parentComponent = window.Hydro.findComponent(component.element.parentElement);
 
       const trigger = JSON.parse(expression);
@@ -537,19 +543,13 @@ document.addEventListener('alpine:init', () => {
 
       const debounce = parseInt(((modifiers[0] === 'debounce' && (modifiers[1] || '250ms')) || '0ms').replace('ms', ''));
 
-      let timeout = 0;
-
       const eventHandler = async (event) => {
         if (event === 'submit' || event === 'click') {
           event.preventDefault();
         }
 
-        clearTimeout(timeout);
-
         const target = event.currentTarget;
-        timeout = setTimeout(async () => {
-          await window.Hydro.hydroBind(target);
-        }, debounce);
+        await window.Hydro.hydroBind(target, debounce);
       };
 
       el.addEventListener(event, eventHandler);
