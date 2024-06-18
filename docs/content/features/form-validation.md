@@ -33,7 +33,7 @@ public class ProductForm : HydroComponent
 
 <form hydro-on:submit="@(() => Model.Submit())">
   <label asp-for="Name"></label>
-  <input asp-for="Name"/>
+  <input asp-for="Name" hydro-bind />
   <span asp-validation-for="Name"></span>  
 
   <button type="submit">Submit</button>
