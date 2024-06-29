@@ -70,6 +70,11 @@ public abstract class HydroComponent : ViewComponent
     [Transient]
     public bool IsMount { get; set; }
 
+    /// <summary>
+    /// Unique component identifier
+    /// </summary>
+    public string ComponentId => _componentId;
+
     /// <summary />
     public HydroComponent()
     {
@@ -404,7 +409,7 @@ public abstract class HydroComponent : ViewComponent
     }
 
     private static string GetComponentPlaceholderTemplate(string componentId) =>
-        $"<div id=\"{componentId}\" hydro hydro-placeholder></div>";
+        $"<div id=\"{componentId}\" key=\"{componentId}\" hydro hydro-placeholder></div>";
 
     private async Task<string> RenderStaticComponent(IPersistentState persistentState)
     {
@@ -452,6 +457,7 @@ public abstract class HydroComponent : ViewComponent
         var rootElement = root.ChildNodes.First(n => n.NodeType == HtmlNodeType.Element);
 
         rootElement.SetAttributeValue("id", componentId);
+        rootElement.SetAttributeValue("key", componentId);
         rootElement.SetAttributeValue("hydro-name", GetType().Name);
         rootElement.SetAttributeValue("x-data", "hydro");
         var hydroAttribute = rootElement.SetAttributeValue("hydro", null);
