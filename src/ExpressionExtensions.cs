@@ -13,7 +13,7 @@ internal static class ExpressionExtensions
         {
             return null;
         }
-    
+
         var name = methodCall.Method.Name;
         var paramInfos = methodCall.Method.GetParameters();
         var arguments = methodCall.Arguments;
@@ -48,7 +48,7 @@ internal static class ExpressionExtensions
         {
             case ConstantExpression constantExpression:
                 return constantExpression.Value;
-            
+
             case MemberExpression memberExpression:
                 return CompileAndEvaluate(memberExpression);
 
@@ -59,8 +59,17 @@ internal static class ExpressionExtensions
                      && callExpression.Arguments[0] is ConstantExpression constantExpression:
 
                 var value = ReplaceJsQuotes(constantExpression.Value?.ToString() ?? string.Empty);
-
                 return EncodeJsExpression(value);
+
+            case MethodCallExpression callExpression
+                when callExpression.Method.DeclaringType == typeof(Param)
+                     && callExpression.Method.Name == nameof(Param.JS)
+                     && callExpression.Arguments.Any()
+                     && callExpression.Arguments[0] is MemberExpression memberExpression:
+
+                var expressionValue = EvaluateExpressionValue(memberExpression);
+                var normalizedExpressionValue = ReplaceJsQuotes(expressionValue?.ToString() ?? string.Empty);
+                return EncodeJsExpression(normalizedExpressionValue);
 
             default:
                 return CompileAndEvaluate(expression);
@@ -79,11 +88,11 @@ internal static class ExpressionExtensions
         value
             .Replace("\"", "&quot;")
             .Replace("'", "&apos;");
-    
+
     internal static string DecodeJsExpressionsInJson(string json) =>
         json.Replace("\"" + JsIndicationStart, "")
             .Replace(JsIndicationEnd + "\"", "");
-    
+
     private static string EncodeJsExpression(object expression) =>
         $"{JsIndicationStart}{expression}{JsIndicationEnd}";
 }

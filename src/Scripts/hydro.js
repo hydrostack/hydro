@@ -225,7 +225,7 @@
     let disableTimer;
     let classTimeout;
 
-    if (operationId && type !== 'bind') {
+    if (operationId) {
       if (!operationStatus[operationId]) {
         operationStatus[operationId] = 0;
 
@@ -442,7 +442,7 @@
             const operationTrigger = document.querySelectorAll(`[hydro-operation-id="${operationId}"]`);
             operationStatus[operationId]--;
 
-            if (operationTrigger.length && (operationStatus[operationId] <= 0 || type === 'bind')) {
+            if (operationTrigger.length && (operationStatus[operationId] <= 0)) {
               operationTrigger.forEach(trigger => {
                 trigger.disabled = false;
                 trigger.classList.remove('hydro-request');
