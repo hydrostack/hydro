@@ -36,7 +36,7 @@
         throw new Error(`HTTP error! status: ${response.status}`);
       } else {
         let data = await response.text();
-
+        
         let parser = new DOMParser();
         let doc = parser.parseFromString(data, 'text/html');
         let newContent = doc.querySelector(selector);
@@ -210,6 +210,20 @@
 
   let operationStatus = {};
 
+function postProcessHeaders(headers) {
+        const scripts = headers.get('hydro-js');
+            if (scripts) {
+                const scriptsArray = JSON.parse(scripts);
+                scriptsArray.forEach(script => {
+                    try {
+                        eval(script);
+                    } catch (e) {
+                        console.error('Error executing js:', e, script);
+                    }
+                });
+            }
+}
+
   async function hydroRequest(el, url, requestData, type, eventData, operationId, morphActiveElement) {
     if (!document.contains(el)) {
       return;
@@ -381,7 +395,9 @@
               }
             });
 
-            document.dispatchEvent(new CustomEvent('HydroUpdate', {
+            postProcessHeaders(response.headers);
+
+            document.dispatchEvent(new CustomEvent('HydroComponentUpdate', {
                 detail: { componentId, componentName, url, type }
             }));
           }
@@ -680,6 +696,18 @@ document.addEventListener('alpine:init', () => {
       $component: null,
       init() {
         this.$component = window.Hydro.findComponent(this.$el);
+
+        let component = this.$el;
+        const hydroScripts = component.querySelectorAll('script[type="text/hydro"][hydro-js="true"]');
+        hydroScripts.forEach(script => {
+            try {
+                eval(script.innerHTML);
+            } catch (e) {
+                console.error('Error executing hydro script:', e, script.innerHTML);
+            }
+            //script.parentNode.removeChild(script);
+            });
+
         document.dispatchEvent(new CustomEvent('HydroComponentInit', {
             detail: { component: this.$component }
         }));
