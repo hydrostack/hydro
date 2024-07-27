@@ -54,6 +54,11 @@
         if (push) {
           history.pushState({}, '', url);
         }
+
+        document.dispatchEvent(new CustomEvent('HydroLocation', {
+                detail: { url, selector, push, payload }
+            }));
+
       }
     } catch (error) {
       if (error.message === 'Request stopped') {
@@ -212,6 +217,7 @@
 
     const component = el.closest("[hydro]");
     const componentId = component.getAttribute("id");
+    const componentName = component.getAttribute("hydro-name");
 
     if (!component) {
       throw new Erorr('Cannot determine the closest Hydro component');
@@ -374,6 +380,10 @@
                 counter++;
               }
             });
+
+            document.dispatchEvent(new CustomEvent('HydroUpdate', {
+                detail: { componentId, componentName, url, type }
+            }));
           }
 
           const locationHeader = response.headers.get('Hydro-Location');
@@ -386,6 +396,10 @@
           const redirectHeader = response.headers.get('Hydro-Redirect');
           if (redirectHeader) {
             window.location.href = redirectHeader;
+
+            document.dispatchEvent(new CustomEvent('HydroRedirect', {
+                detail: { redirectHeader }
+            }));
           }
 
           setTimeout(() => { // make sure the event handlers got registered
@@ -666,6 +680,9 @@ document.addEventListener('alpine:init', () => {
       $component: null,
       init() {
         this.$component = window.Hydro.findComponent(this.$el);
+        document.dispatchEvent(new CustomEvent('HydroComponentInit', {
+            detail: { component: this.$component }
+        }));
       },
       async invoke(e, action) {
         if (["click", "submit"].includes(e.type) && ['A', 'BUTTON', 'FORM'].includes(this.$el.tagName)) {
