@@ -168,7 +168,7 @@
       clearTimeout(binding[component.id].timeout);
     }
 
-    
+
     binding[component.id].promise = new Promise(resolve => {
       binding[component.id].timeout = setTimeout(async () => {
         const requestFormData = binding[component.id].formData;
@@ -233,7 +233,10 @@
 
         if (operationTrigger) {
           classTimeout = setTimeout(() => operationTrigger.classList.add('hydro-request'), 200);
-          disableTimer = setTimeout(() => operationTrigger.disabled = true, 200);
+
+          if (type !== 'bind') {
+            disableTimer = setTimeout(() => operationTrigger.disabled = true, 200);
+          }
         }
       }
 
@@ -339,12 +342,14 @@
                 }
 
                 if (from.getAttribute && from.getAttribute("hydro-operation-id")) {
+                  // skip result from bind operation when this operating element is not a hydro component and is awaiting a request already
                   if (type === 'bind' && operationId !== from.getAttribute("hydro-operation-id") && from.getAttribute("hydro") === null) {
                     skip();
                     counter++;
                     return;
                   }
 
+                  // set the operation id, disabled state and hydro class that would be lost after morph
                   to.setAttribute("hydro-operation-id", from.getAttribute("hydro-operation-id"));
                   to.disabled = from.disabled;
                   if (from.classList.contains('hydro-request')) {
@@ -354,23 +359,29 @@
 
                 const fieldName = from.getAttribute && from.getAttribute("name");
 
-                if (fieldName && dirty[fieldName] && dirty[fieldName] !== operationId) {
-                  skip();
-                  counter++;
-                  return;
-                } else {
-                  if (from.tagName === "INPUT" && from.type === 'checkbox') {
-                    from.checked = to.checked;
+                if (fieldName) {
+                  if (dirty[fieldName] && dirty[fieldName] !== operationId) {
+                    skip();
+                    counter++;
+                    return;
                   }
+                }
 
-                  if (from.tagName === "INPUT" && from.type === 'radio') {
-                    from.checked = to.checked;
-                  }
+                if (from.tagName === "INPUT" && from.type === 'checkbox') {
+                  from.checked = to.checked;
+                }
 
-                  if (from.tagName === "INPUT" && ['text', 'number', 'date'].includes(from.type) && from.value !== to.getAttribute("value")) {
-                    if (document.activeElement !== from || (morphActiveElement && from.value !== to.value)) {
+                if (from.tagName === "INPUT" && from.type === 'radio') {
+                  from.checked = to.checked;
+                }
+
+                if (from.tagName === "INPUT" && ['text', 'number', 'date'].includes(from.type) && from.value !== to.getAttribute("value")) {
+                  if (document.activeElement === from) {
+                    if (morphActiveElement && from.value !== to.value) {
                       from.value = to.value;
                     }
+                  } else {
+                    from.value = to.value;
                   }
                 }
 
