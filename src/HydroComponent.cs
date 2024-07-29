@@ -57,6 +57,7 @@ public abstract class HydroComponent : ViewComponent
     /// <summary>
     /// Provides component's key value
     /// </summary>
+    [JsonProperty]
     protected string Key { get; private set; }
 
     /// <summary>
@@ -130,8 +131,8 @@ public abstract class HydroComponent : ViewComponent
     /// <summary>
     /// Implementation of ViewComponent's InvokeAsync method
     /// </summary>
-    /// <param name="parameters">Parameters</param>
-    /// <param name="key">Key</param>
+    /// <param name="parameters">An object with component parameters</param>
+    /// <param name="key">Local identifier to distinguish components of same type</param>
     public async Task<IHtmlContent> InvokeAsync(object parameters = null, string key = null)
     {
         ApplyParameters(parameters);
@@ -424,7 +425,7 @@ public abstract class HydroComponent : ViewComponent
 
         if (IsComponentIdRendered(componentId))
         {
-            return GetComponentPlaceholderTemplate(componentId);
+            return GetComponentPlaceholderTemplate(componentId, Key);
         }
 
         if (!await AuthorizeAsync())
@@ -438,8 +439,8 @@ public abstract class HydroComponent : ViewComponent
         return await GenerateComponentHtml(componentId, persistentState, includeScripts: true);
     }
 
-    private static string GetComponentPlaceholderTemplate(string componentId) =>
-        $"<div id=\"{componentId}\" key=\"{componentId}\" hydro hydro-placeholder></div>";
+    private static string GetComponentPlaceholderTemplate(string componentId, string key) =>
+        $"<div id=\"{componentId}\" {(!string.IsNullOrWhiteSpace(key) ? $"key=\"{key}\"" : "")} hydro hydro-placeholder></div>";
 
     private async Task<string> RenderStaticComponent(IPersistentState persistentState)
     {
@@ -487,9 +488,14 @@ public abstract class HydroComponent : ViewComponent
         var rootElement = root.ChildNodes.First(n => n.NodeType == HtmlNodeType.Element);
 
         rootElement.SetAttributeValue("id", componentId);
-        rootElement.SetAttributeValue("key", componentId);
         rootElement.SetAttributeValue("hydro-name", GetType().Name);
         rootElement.SetAttributeValue("x-data", "hydro");
+
+        if (!string.IsNullOrWhiteSpace(Key))
+        {
+            rootElement.SetAttributeValue("key", Key);
+        }
+
         var hydroAttribute = rootElement.SetAttributeValue("hydro", null);
         hydroAttribute.QuoteType = AttributeValueQuote.WithoutValue;
 

@@ -30,8 +30,16 @@ internal static class PropertyInjector
             return properties;
         }
 
-        var propertyInfos = type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
-            .Where(p => (p.DeclaringType != typeof(ViewComponent)) && p.GetSetMethod()?.IsPublic == true && !p.GetCustomAttributes<TransientAttribute>().Any())
+        var viewComponentType = typeof(ViewComponent);
+        var hydroComponentType = typeof(HydroComponent);
+
+        var propertyInfos = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(p => (p.Name == "Key" && p.DeclaringType == hydroComponentType)
+                        || (p.DeclaringType != viewComponentType
+                            && p.GetGetMethod()?.IsPublic == true
+                            && p.GetSetMethod()?.IsPublic == true
+                            && !p.GetCustomAttributes<TransientAttribute>().Any())
+            )
             .ToArray();
 
         CachedPropertyInfos.TryAdd(type, propertyInfos);
