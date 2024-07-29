@@ -38,6 +38,12 @@ public sealed class HydroComponentTagHelper : TagHelper
     /// </summary>
     [HtmlAttributeName("key")]
     public string Key { get; set; }
+    
+    /// <summary>
+    /// Determines if key should be used for identifying components in the UI
+    /// </summary>
+    [HtmlAttributeName("indexByKey")]
+    public bool IndexByKey { get; set; }
 
     /// <summary>
     /// Parameters passed to the component
@@ -89,7 +95,8 @@ public sealed class HydroComponentTagHelper : TagHelper
         var componentHtml = await viewComponentHelper.InvokeAsync(Name, new
         {
             parameters = Parameters ?? _parameters,
-            key = Key
+            key = Key,
+            indexByKey = IndexByKey
         });
 
         output.Content.SetHtmlContent(componentHtml);
