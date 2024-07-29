@@ -3,6 +3,7 @@
 
   const configMeta = document.querySelector('meta[name="hydro-config"]');
   const config = configMeta ? JSON.parse(configMeta.content) : {};
+  let currentPathname = document.location.pathname + document.location.search;
 
   async function loadPageContent(url, selector, push, condition, payload) {
     const element = document.querySelector(selector);
@@ -54,6 +55,8 @@
         if (push) {
           history.pushState({}, '', url);
         }
+
+        currentPathname = document.location.pathname + document.location.search;
       }
     } catch (error) {
       if (error.message === 'Request stopped') {
@@ -467,8 +470,12 @@
       ? btoa(String.fromCodePoint(...new TextEncoder().encode(JSON.stringify(value))))
       : null;
   }
-
+  
   window.addEventListener('popstate', async function () {
+    if (document.location.pathname + document.location.search === currentPathname) {
+      return;
+    }
+
     await loadPageContent(window.location.href, 'body', false);
   });
 
