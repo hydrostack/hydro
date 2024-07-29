@@ -43,16 +43,16 @@
         let newTitle = doc.querySelector('head>title');
         element.innerHTML = newContent.innerHTML;
 
-        if (selector === 'body') {
-          window.scrollTo(0, 0);
-        }
-
         if (newTitle) {
           document.title = newTitle.textContent;
         }
 
         if (push) {
           history.pushState({}, '', url);
+        }
+
+        if (selector === 'body' && !window.location.hash) {
+            window.scrollTo(0, 0);
         }
 
         document.dispatchEvent(new CustomEvent('HydroLocation', {
