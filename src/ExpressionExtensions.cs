@@ -13,7 +13,7 @@ internal static class ExpressionExtensions
         {
             return null;
         }
-    
+
         var name = methodCall.Method.Name;
         var paramInfos = methodCall.Method.GetParameters();
         var arguments = methodCall.Arguments;
@@ -28,7 +28,15 @@ internal static class ExpressionExtensions
         for (var i = 0; i < arguments.Count; i++)
         {
             var paramName = paramInfos[i].Name!;
-            parameters[paramName] = EvaluateExpressionValue(arguments[i]);
+
+            try
+            {
+                parameters[paramName] = EvaluateExpressionValue(arguments[i]);
+            }
+            catch(Exception exception)
+            {
+                throw new NotSupportedException($"Unsupported expression type in the Hydro action call: {expression.GetType().Name}, parameter: {paramName}. Try to use primitive value as a parameter.", exception);
+            }
         }
 
         return (name, parameters);
@@ -40,12 +48,9 @@ internal static class ExpressionExtensions
         {
             case ConstantExpression constantExpression:
                 return constantExpression.Value;
-            
+
             case MemberExpression memberExpression:
-                var objectMember = Expression.Convert(memberExpression, typeof(object));
-                var getterLambda = Expression.Lambda<Func<object>>(objectMember);
-                var getter = getterLambda.Compile();
-                return getter();
+                return CompileAndEvaluate(memberExpression);
 
             case MethodCallExpression callExpression
                 when callExpression.Method.DeclaringType == typeof(Param)
@@ -54,23 +59,40 @@ internal static class ExpressionExtensions
                      && callExpression.Arguments[0] is ConstantExpression constantExpression:
 
                 var value = ReplaceJsQuotes(constantExpression.Value?.ToString() ?? string.Empty);
-
                 return EncodeJsExpression(value);
 
+            case MethodCallExpression callExpression
+                when callExpression.Method.DeclaringType == typeof(Param)
+                     && callExpression.Method.Name == nameof(Param.JS)
+                     && callExpression.Arguments.Any()
+                     && callExpression.Arguments[0] is MemberExpression memberExpression:
+
+                var expressionValue = EvaluateExpressionValue(memberExpression);
+                var normalizedExpressionValue = ReplaceJsQuotes(expressionValue?.ToString() ?? string.Empty);
+                return EncodeJsExpression(normalizedExpressionValue);
+
             default:
-                throw new NotSupportedException("Unsupported expression type: " + expression.GetType().Name);
+                return CompileAndEvaluate(expression);
         }
+    }
+
+    private static object CompileAndEvaluate(Expression expression)
+    {
+        var objectMember = Expression.Convert(expression, typeof(object));
+        var getterLambda = Expression.Lambda<Func<object>>(objectMember);
+        var getter = getterLambda.Compile();
+        return getter();
     }
 
     internal static string ReplaceJsQuotes(string value) =>
         value
             .Replace("\"", "&quot;")
             .Replace("'", "&apos;");
-    
+
     internal static string DecodeJsExpressionsInJson(string json) =>
         json.Replace("\"" + JsIndicationStart, "")
             .Replace(JsIndicationEnd + "\"", "");
-    
+
     private static string EncodeJsExpression(object expression) =>
         $"{JsIndicationStart}{expression}{JsIndicationEnd}";
 }

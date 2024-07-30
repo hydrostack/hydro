@@ -3,6 +3,7 @@
 
   const configMeta = document.querySelector('meta[name="hydro-config"]');
   const config = configMeta ? JSON.parse(configMeta.content) : {};
+  let currentPathname = document.location.pathname + document.location.search;
 
   async function loadPageContent(url, selector, push, condition, payload) {
     const element = document.querySelector(selector);
@@ -55,6 +56,7 @@
             window.scrollTo(0, 0);
         }
 
+        currentPathname = document.location.pathname + document.location.search;
       }
     } catch (error) {
       if (error.message === 'Request stopped') {
@@ -166,7 +168,7 @@
       clearTimeout(binding[component.id].timeout);
     }
 
-    
+
     binding[component.id].promise = new Promise(resolve => {
       binding[component.id].timeout = setTimeout(async () => {
         const requestFormData = binding[component.id].formData;
@@ -223,7 +225,7 @@
     let disableTimer;
     let classTimeout;
 
-    if (operationId && type !== 'bind') {
+    if (operationId) {
       if (!operationStatus[operationId]) {
         operationStatus[operationId] = 0;
 
@@ -231,7 +233,10 @@
 
         if (operationTrigger) {
           classTimeout = setTimeout(() => operationTrigger.classList.add('hydro-request'), 200);
-          disableTimer = setTimeout(() => operationTrigger.disabled = true, 200);
+
+          if (type !== 'bind') {
+            disableTimer = setTimeout(() => operationTrigger.disabled = true, 200);
+          }
         }
       }
 
@@ -337,12 +342,14 @@
                 }
 
                 if (from.getAttribute && from.getAttribute("hydro-operation-id")) {
+                  // skip result from bind operation when this operating element is not a hydro component and is awaiting a request already
                   if (type === 'bind' && operationId !== from.getAttribute("hydro-operation-id") && from.getAttribute("hydro") === null) {
                     skip();
                     counter++;
                     return;
                   }
 
+                  // set the operation id, disabled state and hydro class that would be lost after morph
                   to.setAttribute("hydro-operation-id", from.getAttribute("hydro-operation-id"));
                   to.disabled = from.disabled;
                   if (from.classList.contains('hydro-request')) {
@@ -352,23 +359,29 @@
 
                 const fieldName = from.getAttribute && from.getAttribute("name");
 
-                if (fieldName && dirty[fieldName] && dirty[fieldName] !== operationId) {
-                  skip();
-                  counter++;
-                  return;
-                } else {
-                  if (from.tagName === "INPUT" && from.type === 'checkbox') {
-                    from.checked = to.checked;
+                if (fieldName) {
+                  if (dirty[fieldName] && dirty[fieldName] !== operationId) {
+                    skip();
+                    counter++;
+                    return;
                   }
+                }
 
-                  if (from.tagName === "INPUT" && from.type === 'radio') {
-                    from.checked = to.checked;
-                  }
+                if (from.tagName === "INPUT" && from.type === 'checkbox') {
+                  from.checked = to.checked;
+                }
 
-                  if (from.tagName === "INPUT" && ['text', 'number', 'date'].includes(from.type) && from.value !== to.getAttribute("value")) {
-                    if (document.activeElement !== from || (morphActiveElement && from.value !== to.value)) {
+                if (from.tagName === "INPUT" && from.type === 'radio') {
+                  from.checked = to.checked;
+                }
+
+                if (from.tagName === "INPUT" && ['text', 'number', 'date'].includes(from.type) && from.value !== to.getAttribute("value")) {
+                  if (document.activeElement === from) {
+                    if (morphActiveElement && from.value !== to.value) {
                       from.value = to.value;
                     }
+                  } else {
+                    from.value = to.value;
                   }
                 }
 
@@ -429,7 +442,7 @@
             const operationTrigger = document.querySelectorAll(`[hydro-operation-id="${operationId}"]`);
             operationStatus[operationId]--;
 
-            if (operationTrigger.length && (operationStatus[operationId] <= 0 || type === 'bind')) {
+            if (operationTrigger.length && (operationStatus[operationId] <= 0)) {
               operationTrigger.forEach(trigger => {
                 trigger.disabled = false;
                 trigger.classList.remove('hydro-request');
@@ -468,8 +481,12 @@
       ? btoa(String.fromCodePoint(...new TextEncoder().encode(JSON.stringify(value))))
       : null;
   }
-
+  
   window.addEventListener('popstate', async function () {
+    if (document.location.pathname + document.location.search === currentPathname) {
+      return;
+    }
+
     await loadPageContent(window.location.href, 'body', false);
   });
 
