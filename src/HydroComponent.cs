@@ -1,6 +1,7 @@
 ﻿using HtmlAgilityPack;
 using Hydro.Configuration;
 using Hydro.Utils;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,7 @@ using Newtonsoft.Json;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -131,20 +133,58 @@ public abstract class HydroComponent : ViewComponent
     /// <param name="key">Key</param>
     public async Task<IHtmlContent> InvokeAsync(object parameters = null, string key = null)
     {
-        ApplyParameters(parameters);
+        var componentHtml = string.Empty;
+        if (ShouldRender())
+        {
+            await SetParametersAsync(parameters);
 
-        ViewContext.ViewData.TemplateInfo.HtmlFieldPrefix = null;
-        Key = key;
+            ViewContext.ViewData.TemplateInfo.HtmlFieldPrefix = null;
+            Key = key;
 
-        var persistentState = HttpContext.RequestServices.GetService<IPersistentState>();
-        _options = HttpContext.RequestServices.GetService<HydroOptions>();
+            var persistentState = HttpContext.RequestServices.GetService<IPersistentState>();
 
-        var componentHtml = HttpContext.IsHydro(excludeBoosted: true)
-            ? await RenderOnlineComponent(persistentState)
-            : await RenderStaticComponent(persistentState);
+            _options = HttpContext.RequestServices.GetService<HydroOptions>();
+
+            if (persistentState == null || _options == null)
+            {
+                throw new ApplicationException("Hydro have not been initialized");
+            }
+
+            var firstRender = !IsMount;
+
+            try
+            {
+                //we need to for async threads called upon Dispatch, otherwise could just crash silently
+                componentHtml = HttpContext.IsHydro(excludeBoosted: true)
+                    ? await RenderOnlineComponent(persistentState)
+                    : await RenderStaticComponent(persistentState);
+            }
+            catch (Exception e)
+            {
+                HandleError(e);
+            }
+
+            await OnAfterRenderAsync(firstRender);
+        }
 
         return new HtmlString(componentHtml);
     }
+
+    public virtual void HandleError(Exception e)
+    {
+        var message = $"{e.Message} {e.StackTrace}";
+        Debug.WriteLine(message);
+        Dispatch(new UnhandledHydroError(message, e), Scope.Global);
+    }
+
+    /// <summary>
+    /// Method invoked after each time the component has been rendered.
+    /// </summary>
+    /// <param name="firstRender">
+    /// Set to <c>true</c> if this is the first time it was rendered
+    /// </param>
+    protected virtual Task OnAfterRenderAsync(bool firstRender)
+        => Task.CompletedTask;
 
     /// <summary>
     /// Subscribes to a Hydro event
@@ -289,6 +329,13 @@ public abstract class HydroComponent : ViewComponent
         Render();
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Returns a flag to indicate whether the component should render.
+    /// </summary>
+    /// <returns></returns>
+    protected virtual bool ShouldRender()
+        => true;
 
     /// <summary>
     /// Triggered before each render
@@ -874,7 +921,20 @@ public abstract class HydroComponent : ViewComponent
         return htmlDocument;
     }
 
-    private void ApplyParameters(object parameters)
+    /// <summary>
+    /// Method invoked when the component has received parameters from its parent in
+    /// the render tree, and the incoming values have been assigned to properties.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing any asynchronous operation.</returns>
+    protected virtual Task OnParametersSetAsync()
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// Method invoked when the component has received parameters from its parent in
+    /// the render tree, and the incoming values have been assigned to properties.	/// </summary>
+    /// <param name="parameters"></param>
+    /// <returns></returns>
+    public virtual async Task SetParametersAsync(object parameters)
     {
         switch (parameters)
         {
@@ -889,6 +949,8 @@ public abstract class HydroComponent : ViewComponent
         ApplyObject(this, parameters);
         break;
         }
+
+        await OnParametersSetAsync();
     }
 
     private void ApplyObject<T>(T target, object source)
