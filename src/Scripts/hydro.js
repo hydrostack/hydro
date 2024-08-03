@@ -4,6 +4,18 @@
   const configMeta = document.querySelector('meta[name="hydro-config"]');
   const config = configMeta ? JSON.parse(configMeta.content) : {};
 
+    function evalScripts(element) {
+        //eval all non-hydro scripts
+         const scripts = element.querySelectorAll('script:not([type]), script[type="text/javascript"]'); 
+                scripts.forEach(script => {
+                    try {
+                        eval(script.innerHTML);
+                    } catch (e) {
+                        console.error('Error executing script:', e, script.innerHTML);
+                    }
+                });
+    }
+
   async function loadPageContent(url, selector, push, condition, payload) {
     const element = document.querySelector(selector);
     element.classList.add('hydro-loading');
@@ -54,6 +66,9 @@
         if (selector === 'body' && !window.location.hash) {
             window.scrollTo(0, 0);
         }
+ 
+        //eval all non-hydro scripts loaded along with new body content
+        evalScripts(element);
 
         document.dispatchEvent(new CustomEvent('HydroLocation', {
                 detail: { url, selector, push, payload }
@@ -396,6 +411,9 @@ function postProcessHeaders(headers) {
             });
 
             postProcessHeaders(response.headers);
+
+            //eval all non-hydro scripts loaded along with new content
+            evalScripts(component);
 
             document.dispatchEvent(new CustomEvent('HydroComponentUpdate', {
                 detail: { componentId, componentName, url, type }
