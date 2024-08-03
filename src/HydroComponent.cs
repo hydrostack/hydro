@@ -55,6 +55,11 @@ public abstract class HydroComponent : ViewComponent
     protected string Key { get; private set; }
 
     /// <summary>
+    /// Determines if Key is used as a UI element recognizer when morphing
+    /// </summary>
+    protected bool IndexByKey { get; private set; }
+
+    /// <summary>
     /// Provides list of already accessed component's properties  
     /// </summary>
     public HashSet<string> TouchedProperties { get; set; } = new();
@@ -127,12 +132,14 @@ public abstract class HydroComponent : ViewComponent
     /// </summary>
     /// <param name="parameters">Parameters</param>
     /// <param name="key">Key</param>
-    public async Task<IHtmlContent> InvokeAsync(object parameters = null, string key = null)
+    /// <param name="indexByKey">Use key as a UI element recognizer</param>
+    public async Task<IHtmlContent> InvokeAsync(object parameters = null, string key = null, bool indexByKey = false)
     {
         ApplyParameters(parameters);
 
         ViewContext.ViewData.TemplateInfo.HtmlFieldPrefix = null;
         Key = key;
+        IndexByKey = indexByKey;
 
         var persistentState = HttpContext.RequestServices.GetService<IPersistentState>();
         _options = HttpContext.RequestServices.GetService<HydroOptions>();
@@ -278,7 +285,7 @@ public abstract class HydroComponent : ViewComponent
     public virtual void Mount()
     {
     }
-    
+
     /// <summary>
     /// Triggered before each render
     /// </summary>
@@ -394,7 +401,7 @@ public abstract class HydroComponent : ViewComponent
 
         if (IsComponentIdRendered(componentId))
         {
-            return GetComponentPlaceholderTemplate(componentId);
+            return GetComponentPlaceholderTemplate(componentId, IndexByKey);
         }
 
         if (!await AuthorizeAsync())
@@ -408,8 +415,8 @@ public abstract class HydroComponent : ViewComponent
         return await GenerateComponentHtml(componentId, persistentState);
     }
 
-    private static string GetComponentPlaceholderTemplate(string componentId) =>
-        $"<div id=\"{componentId}\" key=\"{componentId}\" hydro hydro-placeholder></div>";
+    private static string GetComponentPlaceholderTemplate(string componentId, bool indexByKey) =>
+        $"<div id=\"{componentId}\" {(indexByKey ? $"key=\"{componentId}\"" : "")} hydro hydro-placeholder></div>";
 
     private async Task<string> RenderStaticComponent(IPersistentState persistentState)
     {
@@ -457,9 +464,14 @@ public abstract class HydroComponent : ViewComponent
         var rootElement = root.ChildNodes.First(n => n.NodeType == HtmlNodeType.Element);
 
         rootElement.SetAttributeValue("id", componentId);
-        rootElement.SetAttributeValue("key", componentId);
         rootElement.SetAttributeValue("hydro-name", GetType().Name);
         rootElement.SetAttributeValue("x-data", "hydro");
+
+        if (IndexByKey)
+        {
+            rootElement.SetAttributeValue("key", componentId);
+        }
+
         var hydroAttribute = rootElement.SetAttributeValue("hydro", null);
         hydroAttribute.QuoteType = AttributeValueQuote.WithoutValue;
 
