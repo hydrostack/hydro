@@ -5,10 +5,20 @@
   const config = configMeta ? JSON.parse(configMeta.content) : {};
 
   function injectScript(componentElement, scriptContent) {
-        const script = document.createElement('script');
-        script.innerHTML = scriptContent;
-        componentElement.appendChild(script);
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.text = scriptContent;
+    script.setAttribute('data-injected', 'true');
+    componentElement.appendChild(script);
   }
+
+  function injectScriptAtSamePosition(existingScript) {
+    const newScript = document.createElement('script');
+    newScript.type = 'text/javascript';
+    newScript.innerHTML = existingScript.innerHTML;
+    newScript.setAttribute('data-injected', 'true');
+    existingScript.parentNode.replaceChild(newScript, existingScript);
+}
 
   function postProcessHeaders(headers, element) {
         const scripts = headers.get('hydro-js');
@@ -20,17 +30,24 @@
             }
   }
 
-  function evalScripts(element) {
-        //eval all non-hydro scripts
-         const scripts = element.querySelectorAll('script:not([type]), script[type="text/javascript"]'); 
-                scripts.forEach(script => {
-                    try {
-                        injectScript(element, script.innerHTML);
-                    } catch (e) {
-                        console.error('Error executing script:', e, script.innerHTML);
-                    }
-                });
-    }
+    function execProperScripts(element) {
+      const componentId = element.getAttribute("id");
+
+      const scripts = element.querySelectorAll('script:not([type]), script[type="text/javascript"]');
+      scripts.forEach(script => {
+        try {
+          const scriptComponent = script.closest("[hydro]");
+          const scriptComponentId = scriptComponent ? scriptComponent.getAttribute("id") : null;
+
+          // if it does not belong to a child component
+          if (scriptComponentId === componentId || scriptComponentId === null) {
+            injectScriptAtSamePosition(script);
+          }
+        } catch (e) {
+          console.error('Error executing script:', e, script.innerHTML);
+        }
+      });
+  }
 
   async function loadPageContent(url, selector, push, condition, payload) {
     const element = document.querySelector(selector);
@@ -67,24 +84,29 @@
         
         let parser = new DOMParser();
         let doc = parser.parseFromString(data, 'text/html');
-        let newContent = doc.querySelector(selector);
+
+        let newContent = doc.querySelector('body');
+        let insideLayout = doc.querySelector(selector);
+        if (insideLayout) {
+            newContent = insideLayout;
+        }        
+        element.innerHTML = newContent.innerHTML;       
+
         let newTitle = doc.querySelector('head>title');
-        element.innerHTML = newContent.innerHTML;
-
-        if (newTitle) {
-          document.title = newTitle.textContent;
+            if (newTitle) {
+            document.title = newTitle.textContent;
         }
-
+        
         if (push) {
           history.pushState({}, '', url);
         }
 
-        if (selector === 'body' && !window.location.hash) {
+        if (selector === findLocationTarget() && !window.location.hash) {
             window.scrollTo(0, 0);
         }
  
-        //eval all non-hydro scripts loaded along with new body content
-        evalScripts(element);
+        //exec scripts loaded along with new ajax-loaded content
+        execProperScripts(element);
 
         document.dispatchEvent(new CustomEvent('HydroLocation', {
                 detail: { url, selector, push, payload }
@@ -415,7 +437,7 @@
             postProcessHeaders(response.headers, component);
 
             //eval all non-hydro scripts loaded along with new content
-            evalScripts(component);
+            execProperScripts(component);
 
             document.dispatchEvent(new CustomEvent('HydroComponentUpdate', {
                 detail: { componentId, componentName, url, type }
@@ -426,7 +448,7 @@
           if (locationHeader) {
             let locationData = JSON.parse(locationHeader);
 
-            await loadPageContent(locationData.path, locationData.target || 'body', true, null, locationData.payload);
+            await loadPageContent(locationData.path, locationData.target || findLocationTarget(), true, null, locationData.payload);
           }
 
           const redirectHeader = response.headers.get('Hydro-Redirect');
@@ -518,8 +540,16 @@
       : null;
   }
 
+  function findLocationTarget() {
+    let hydro = document.querySelector('#hydro-location');
+    if (hydro) {
+        return `#hydro-location`;        
+    }
+    return `body`;
+  }
+
   window.addEventListener('popstate', async function () {
-    await loadPageContent(window.location.href, 'body', false);
+    await loadPageContent(window.location.href, findLocationTarget(), false);
   });
 
   return {
@@ -683,7 +713,7 @@ document.addEventListener('alpine:init', () => {
         currentBoostUrl = url;
         const classTimeout = setTimeout(() => link.classList.add('hydro-request'), 200);
         try {
-          await window.Hydro.loadPageContent(url, 'body', true, () => currentBoostUrl === url);
+          await window.Hydro.loadPageContent(url, findLocationTarget(), true, () => currentBoostUrl === url);
         } finally {
           clearTimeout(classTimeout);
           link.classList.remove('hydro-request')
