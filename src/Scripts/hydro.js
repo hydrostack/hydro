@@ -4,12 +4,28 @@
   const configMeta = document.querySelector('meta[name="hydro-config"]');
   const config = configMeta ? JSON.parse(configMeta.content) : {};
 
-    function evalScripts(element) {
+  function injectScript(componentElement, scriptContent) {
+        const script = document.createElement('script');
+        script.innerHTML = scriptContent;
+        componentElement.appendChild(script);
+  }
+
+  function postProcessHeaders(headers, element) {
+        const scripts = headers.get('hydro-js');
+            if (scripts) {
+                const scriptsArray = JSON.parse(scripts);
+                scriptsArray.forEach(script => {
+                    injectScript(element, script);
+                });
+            }
+  }
+
+  function evalScripts(element) {
         //eval all non-hydro scripts
          const scripts = element.querySelectorAll('script:not([type]), script[type="text/javascript"]'); 
                 scripts.forEach(script => {
                     try {
-                        eval(script.innerHTML);
+                        injectScript(element, script.innerHTML);
                     } catch (e) {
                         console.error('Error executing script:', e, script.innerHTML);
                     }
@@ -225,20 +241,6 @@
 
   let operationStatus = {};
 
-function postProcessHeaders(headers) {
-        const scripts = headers.get('hydro-js');
-            if (scripts) {
-                const scriptsArray = JSON.parse(scripts);
-                scriptsArray.forEach(script => {
-                    try {
-                        eval(script);
-                    } catch (e) {
-                        console.error('Error executing js:', e, script);
-                    }
-                });
-            }
-}
-
   async function hydroRequest(el, url, requestData, type, eventData, operationId, morphActiveElement) {
     if (!document.contains(el)) {
       return;
@@ -410,7 +412,7 @@ function postProcessHeaders(headers) {
               }
             });
 
-            postProcessHeaders(response.headers);
+            postProcessHeaders(response.headers, component);
 
             //eval all non-hydro scripts loaded along with new content
             evalScripts(component);
