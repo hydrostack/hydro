@@ -360,6 +360,15 @@ public abstract class HydroComponent : ViewComponent
         HttpContext.Response.HydroLocation(url, payload);
 
     /// <summary>
+    /// Perform a redirect without page reload, but intead of replacing the whole body replaces the specified element. Example "#renderBody" or "renderBody" etc..
+    /// </summary>
+    /// <param name="url"></param>
+    /// <param name="target"></param>
+    /// <param name="payload"></param>
+    public void Location(string url, string target, object payload = null) =>
+        HttpContext.Response.HydroLocation(url, target, payload);
+
+    /// <summary>
     /// Cache value
     /// </summary>
     /// <param name="func">Value producer</param>
