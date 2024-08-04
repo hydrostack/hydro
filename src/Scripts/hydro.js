@@ -4,13 +4,18 @@
   const configMeta = document.querySelector('meta[name="hydro-config"]');
   const config = configMeta ? JSON.parse(configMeta.content) : {};
 
-  function injectScript(componentElement, scriptContent) {
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.text = scriptContent;
-    script.setAttribute('data-injected', 'true');
-    componentElement.appendChild(script);
-  }
+function injectScript(componentElement, scriptContent) {
+  const script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.innerHTML = `
+    (function($component) {
+      ${scriptContent}
+    })(document.getElementById("${componentElement.id}"));
+  `;
+  script.setAttribute('data-injected', 'true');
+  componentElement.appendChild(script);
+}
+
 
   function injectScriptAtSamePosition(existingScript) {
     const newScript = document.createElement('script');
@@ -33,7 +38,7 @@
     function execProperScripts(element) {
       const componentId = element.getAttribute("id");
 
-      const scripts = element.querySelectorAll('script:not([type]), script[type="text/javascript"]');
+      const scripts = element.querySelectorAll('script:not([type]):not([data-injected]), script[type="text/javascript"]:not([data-injected])');
       scripts.forEach(script => {
         try {
           const scriptComponent = script.closest("[hydro]");
@@ -556,6 +561,7 @@
     hydroEvent,
     hydroBind,
     hydroAction,
+    injectScript,
     loadPageContent,
     findComponent,
     generateGuid,
@@ -751,12 +757,12 @@ document.addEventListener('alpine:init', () => {
         const hydroScripts = component.querySelectorAll('script[type="text/hydro"][hydro-js="true"]');
         hydroScripts.forEach(script => {
             try {
-                eval(script.innerHTML);
+                    window.Hydro.injectScript(component, script.innerHTML);
+                    script.parentNode.removeChild(script);
             } catch (e) {
                 console.error('Error executing hydro script:', e, script.innerHTML);
             }
-            //script.parentNode.removeChild(script);
-            });
+        });
 
         document.dispatchEvent(new CustomEvent('HydroComponentInit', {
             detail: { component: this.$component }
