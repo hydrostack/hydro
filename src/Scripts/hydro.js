@@ -16,7 +16,6 @@ function injectScript(componentElement, scriptContent) {
   componentElement.appendChild(script);
 }
 
-
   function injectScriptAtSamePosition(existingScript) {
     const newScript = document.createElement('script');
     newScript.type = 'text/javascript';
@@ -25,7 +24,10 @@ function injectScript(componentElement, scriptContent) {
     existingScript.parentNode.replaceChild(newScript, existingScript);
 }
 
+
   function postProcessHeaders(headers, element) {
+
+        //used by ExecuteJs
         const scripts = headers.get('hydro-js');
             if (scripts) {
                 const scriptsArray = JSON.parse(scripts);
@@ -36,18 +38,12 @@ function injectScript(componentElement, scriptContent) {
   }
 
     function execProperScripts(element) {
-      const componentId = element.getAttribute("id");
-
       const scripts = element.querySelectorAll('script:not([type]):not([data-injected]), script[type="text/javascript"]:not([data-injected])');
       scripts.forEach(script => {
         try {
-          const scriptComponent = script.closest("[hydro]");
-          const scriptComponentId = scriptComponent ? scriptComponent.getAttribute("id") : null;
-
-          // if it does not belong to a child component
-          if (scriptComponentId === componentId || scriptComponentId === null) {
+            
             injectScriptAtSamePosition(script);
-          }
+
         } catch (e) {
           console.error('Error executing script:', e, script.innerHTML);
         }
@@ -246,7 +242,7 @@ function injectScript(componentElement, scriptContent) {
     return binding[component.id].promise;
   }
 
-  async function hydroAction(el, component, action) {
+  async function hydroAction(el, component, action, data) {
     const url = `/hydro/${component.name}/${action.name}`;
 
     if (Array.from(el.attributes).some(attr => attr.name.startsWith('x-hydro-bind')) && isElementDirty(el)) {
@@ -263,7 +259,7 @@ function injectScript(componentElement, scriptContent) {
     const operationId = generateGuid();
     el.setAttribute("hydro-operation-id", operationId);
 
-    await hydroRequest(el, url, { parameters: action.parameters }, 'action', null, operationId, true);
+    await hydroRequest(el, url, { parameters: action.parameters }, 'action', data, operationId, true);
   }
 
   let operationStatus = {};
@@ -327,6 +323,13 @@ function injectScript(componentElement, scriptContent) {
 
         if (requestData.eventData) {
           requestForm.append('__hydro_event', JSON.stringify(requestData.eventData))
+        }
+
+        // NEW post form from eventData
+        if (eventData instanceof HTMLFormElement) {
+        new FormData(eventData).forEach((value, key) => {
+            requestForm.append(key, value);
+        });
         }
 
         const scripts = component.querySelectorAll('script[data-id]');
@@ -439,14 +442,19 @@ function injectScript(componentElement, scriptContent) {
               }
             });
 
-            postProcessHeaders(response.headers, component);
+            setTimeout(() => {
 
-            //eval all non-hydro scripts loaded along with new content
-            execProperScripts(component);
+                document.dispatchEvent(new CustomEvent('HydroComponentUpdate', {
+                    detail: { componentId, componentName, url, type }
+                    }));
 
-            document.dispatchEvent(new CustomEvent('HydroComponentUpdate', {
-                detail: { componentId, componentName, url, type }
-            }));
+                //inject all non-hydro scripts ajax-loaded along with new content
+                execProperScripts(component);
+           
+                postProcessHeaders(response.headers, component);
+
+            }, 20);
+
           }
 
           const locationHeader = response.headers.get('Hydro-Location');
@@ -773,6 +781,12 @@ document.addEventListener('alpine:init', () => {
           e.preventDefault();
         }
         await window.Hydro.hydroAction(this.$el, this.$component, action);
+      },
+      async postForm(e, action) {
+        if (["click", "submit"].includes(e.type) && ['A', 'BUTTON', 'FORM'].includes(this.$el.tagName)) {
+          e.preventDefault();
+        }
+        await window.Hydro.hydroAction(this.$el, this.$component, action, e.target);
       },
       async bind(debounce) {
         let element = this.$el;

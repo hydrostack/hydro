@@ -1,10 +1,10 @@
 ﻿using HtmlAgilityPack;
 using Hydro.Configuration;
 using Hydro.Utils;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
@@ -12,6 +12,7 @@ using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -1047,7 +1048,7 @@ public abstract class HydroComponent : ViewComponent
     {
         ModelState.Clear();
 
-        var context = new ValidationContext(this, serviceProvider: null, items: null);
+        var context = new ValidationContext(this, serviceProvider: HttpContext.RequestServices, items: null);
         var validationResults = new List<ValidationResult>();
         Validator.TryValidateObject(this, context, validationResults, true);
         var extractValidationResults = ExtractValidationResults(validationResults);
@@ -1123,4 +1124,77 @@ public abstract class HydroComponent : ViewComponent
 
     private static string Hash(string input) =>
         $"W{Convert.ToHexString(MD5.HashData(Encoding.ASCII.GetBytes(input)))}";
+
+
+    /// <summary>
+    /// Binds model with the request Form if any and updates ModelState. WIth optional preValidate you can transform/check model values before they go to validation and even add your own validation errors. Return value is equal to  ModelState.IsValid.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="model"></param>
+    /// <param name="preValidate"></param>
+    /// <returns></returns>
+    public virtual async Task<bool> BindFormAndValidateAsync<T>(T model, Action<T, ModelStateDictionary> preValidate = null)
+    {
+        ModelState.Clear();
+        IsModelTouched = true;
+
+        var factory = HttpContext.RequestServices.GetRequiredService<IModelBinderFactory>();
+        var metadataProvider = HttpContext.RequestServices.GetRequiredService<IModelMetadataProvider>();
+        var modelMetadata = metadataProvider.GetMetadataForType(typeof(T));
+        var modelBinder = factory.CreateBinder(new ModelBinderFactoryContext
+        {
+            BindingInfo = new BindingInfo { BindingSource = BindingSource.Form },
+            Metadata = modelMetadata,
+            CacheToken = modelMetadata
+        });
+
+        var bindingInfo = new BindingInfo
+        {
+            BindingSource = BindingSource.Form
+        };
+
+        var modelBindingContext = DefaultModelBindingContext.CreateBindingContext(
+            ViewContext,
+            new CompositeValueProvider { new FormValueProvider(BindingSource.Form, HttpContext.Request.Form, CultureInfo.CurrentCulture) },
+            modelMetadata,
+            bindingInfo: bindingInfo,
+            modelName: typeof(T).Name);
+
+        modelBindingContext.Model = model;
+
+        await modelBinder.BindModelAsync(modelBindingContext);
+
+        preValidate?.Invoke(model, modelBindingContext.ModelState);
+
+        if (modelBindingContext.Result.IsModelSet)
+        {
+            var validationResults = new HashSet<ValidationResult>();
+            var isValid = Validator.TryValidateObject(model, new ValidationContext(model, HttpContext.RequestServices, null), validationResults, true);
+            if (!isValid)
+            {
+                foreach (var validationResult in validationResults)
+                {
+                    foreach (var memberName in validationResult.MemberNames)
+                    {
+                        modelBindingContext.ModelState.AddModelError(memberName, validationResult.ErrorMessage);
+                    }
+                }
+            }
+        }
+
+        if (!modelBindingContext.ModelState.IsValid)
+        {
+            foreach (var key in modelBindingContext.ModelState.Keys)
+            {
+                var values = modelBindingContext.ModelState[key];
+                if (values != null)
+                    foreach (var error in values.Errors)
+                    {
+                        ModelState.AddModelError(key, error.ErrorMessage);
+                    }
+            }
+        }
+
+        return ModelState.IsValid;
+    }
 }

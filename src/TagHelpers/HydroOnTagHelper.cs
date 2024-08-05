@@ -1,9 +1,9 @@
-﻿using System.Linq.Expressions;
-using Microsoft.AspNetCore.Html;
+﻿using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using Newtonsoft.Json;
+using System.Linq.Expressions;
 using static Hydro.ExpressionExtensions;
 
 namespace Hydro.TagHelpers;
@@ -56,8 +56,20 @@ public sealed class HydroOnTagHelper : TagHelper
             {
                 throw new InvalidOperationException($"Wrong event handler statement in component for {modelType.Namespace}");
             }
-            
-            var jsExpression = GetJsExpression(actionExpression);
+
+
+
+            string jsExpression;
+
+            switch (eventItem.Key)
+            {
+            case "submit":
+            jsExpression = GetJsPostFormExpression(actionExpression);
+            break;
+            default:
+            jsExpression = GetJsExpression(actionExpression);
+            break;
+            }
 
             if (jsExpression == null)
             {
@@ -94,16 +106,36 @@ public sealed class HydroOnTagHelper : TagHelper
         {
             return null;
         }
-        
+
         switch (methodCall.Method.Name)
         {
-            case nameof(HydroClientActions.Invoke):
-                var expressionValue = EvaluateExpressionValue(methodCall.Arguments[0]);
-                return ReplaceJsQuotes(expressionValue?.ToString());
-            
-            default:
-                return null;
+        case nameof(HydroClientActions.Invoke):
+        var expressionValue = EvaluateExpressionValue(methodCall.Arguments[0]);
+        return ReplaceJsQuotes(expressionValue?.ToString());
+
+        default:
+        return null;
         }
+    }
+
+    private static string GetJsPostFormExpression(LambdaExpression expression)
+    {
+        var eventData = expression.GetNameAndParameters();
+
+        if (eventData == null)
+        {
+            return null;
+        }
+
+        var invokeJson = JsonConvert.SerializeObject(new
+        {
+            eventData.Value.Name,
+            eventData.Value.Parameters
+        }, JsonSettings.SerializerSettings);
+
+        var invokeJsObject = DecodeJsExpressionsInJson(invokeJson);
+
+        return $"postForm($event, {invokeJsObject})";
     }
 
     private static string GetJsInvokeExpression(LambdaExpression expression)
