@@ -102,9 +102,20 @@ function injectScript(componentElement, scriptContent) {
           history.pushState({}, '', url);
         }
 
-        if (selector === findLocationTarget() && !window.location.hash) {
-            window.scrollTo(0, 0);
-        }
+          if (selector === findLocationTarget() && !window.location.hash) {
+              window.scrollTo(0, 0);
+          }
+          else {
+            
+                const element = document.querySelector(window.location.hash);              
+                 if (element) {
+                    element.scrollIntoView({
+                        behavior: 'smooth', 
+                        block: 'start'  
+                    });
+                }
+
+            }
  
         //exec scripts loaded along with new ajax-loaded content
         execProperScripts(element);
