@@ -43,7 +43,8 @@ public abstract class HydroComponent : ViewComponent
 
     private static readonly JsonSerializerSettings JsonSerializerSettings = new()
     {
-        Converters = new JsonConverter[] { new Int32Converter() }.ToList()
+        Converters = new JsonConverter[] { new Int32Converter() }.ToList(),
+        ReferenceLoopHandling = ReferenceLoopHandling.Ignore
     };
 
     private static readonly ConcurrentDictionary<Type, IHydroAuthorizationFilter[]> ComponentAuthorizationAttributes = new();
@@ -255,6 +256,15 @@ public abstract class HydroComponent : ViewComponent
             Action = action,
             SubjectRetriever = subject
         });
+
+    /// <summary>
+    /// Unsubscribe from a Hydro event
+    /// </summary>
+    /// <typeparam name="TEvent"></typeparam>
+    public void Unsubscribe<TEvent>()
+    {
+        var found = _subscriptions.RemoveWhere(x => x.EventName == typeof(TEvent).Name);
+    }
 
     /// <summary>
     /// Triggers a Hydro event
@@ -663,7 +673,7 @@ public abstract class HydroComponent : ViewComponent
         scriptNode.SetAttributeValue("type", "text/hydro");
         scriptNode.SetAttributeValue("hydro-event", "true");
         scriptNode.SetAttributeValue("x-data", "");
-        scriptNode.SetAttributeValue("x-on-hydro-event", JsonConvert.SerializeObject(eventData));
+        scriptNode.SetAttributeValue("x-on-hydro-event", JsonConvert.SerializeObject(eventData, JsonSerializerSettings));
         return scriptNode;
     }
 
@@ -702,7 +712,7 @@ public abstract class HydroComponent : ViewComponent
             })
             .ToList();
 
-        HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.Trigger, JsonConvert.SerializeObject(data));
+        HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.Trigger, JsonConvert.SerializeObject(data, JsonSerializerSettings));
     }
 
     private void PopulateClientScripts()
@@ -712,7 +722,7 @@ public abstract class HydroComponent : ViewComponent
             return;
         }
 
-        HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.Scripts, JsonConvert.SerializeObject(_clientScripts));
+        HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.Scripts, JsonConvert.SerializeObject(_clientScripts, JsonSerializerSettings));
 
         _clientScripts.Clear();
     }
@@ -992,7 +1002,7 @@ public abstract class HydroComponent : ViewComponent
             {
                 try
                 {
-                    var json = JsonConvert.SerializeObject(sourceProperty.GetValue(source));
+                    var json = JsonConvert.SerializeObject(sourceProperty.GetValue(source), JsonSerializerSettings);
                     sourceValue = JsonConvert.DeserializeObject(json, targetProperty.PropertyType);
                 }
                 catch
