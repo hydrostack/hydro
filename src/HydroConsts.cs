@@ -16,6 +16,7 @@ internal static class HydroConsts
         public const string OperationId = "Hydro-Operation-Id";
         public const string SkipOutput = "Hydro-Skip-Output";
         public const string RefreshToken = "Refresh-Antiforgery-Token";
+        public const string Scripts = "Hydro-Js";
     }
 
     public static class ContextItems

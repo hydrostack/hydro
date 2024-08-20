@@ -5,6 +5,52 @@
   const config = configMeta ? JSON.parse(configMeta.content) : {};
   let currentPathname = document.location.pathname + document.location.search;
 
+  function createScriptTag(content, src, autoRemove) {
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.innerHTML = content + ";";
+
+    if (autoRemove) {
+      script.id = generateGuid();
+      script.innerHTML += `setTimeout(() => document.getElementById("${script.id}").remove());`;
+    }
+
+    script.async = true;
+    if (src) {
+      script.src = src;
+    }
+    script.setAttribute('hydro-loaded', 'true');
+    return script;
+  }
+
+  function enableScripts(element, selector) {
+    const scripts = Array.from(element.querySelectorAll(selector));
+
+    for (const script of scripts) {
+      const newScript = createScriptTag(script.innerHTML, script.src);
+      script.parentNode.replaceChild(newScript, script);
+    }
+  }
+
+  function appendComponentScripts(component, scripts) {
+    scripts.forEach(script => {
+      const scriptTag = createScriptTag(`Hydro.executeComponentJs('${component.id}', function() { ${script} })`, null, true);
+      document.body.appendChild(scriptTag);
+    });
+  }
+
+  function enablePlainScripts(element) {
+    enableScripts(element, 'script[type="text/javascript"]:not([hydro-loaded])');
+  }
+
+  function enableHydroScripts(componentElement) {
+    enableScripts(componentElement, `script[hydro-js][hydro-id="${componentElement.id}"]:not([hydro-loaded])`);
+  }
+
+  function executeComponentJs(componentId, func) {
+    func.call(document.getElementById(componentId));
+  }
+
   async function loadPageContent(url, selector, push, condition, payload) {
     const element = document.querySelector(selector);
     element.classList.add('hydro-loading');
@@ -53,10 +99,16 @@
         }
 
         if (selector === 'body' && !window.location.hash) {
-            window.scrollTo(0, 0);
+          window.scrollTo(0, 0);
         }
 
         currentPathname = document.location.pathname + document.location.search;
+
+        enablePlainScripts(element);
+
+        document.dispatchEvent(new CustomEvent('HydroLocation', {
+          detail: { url, selector, push, payload }
+        }));
       }
     } catch (error) {
       if (error.message === 'Request stopped') {
@@ -388,6 +440,13 @@
                 counter++;
               }
             });
+
+            setTimeout(() => enablePlainScripts(component));
+          }
+
+          const scripts = response.headers.get('hydro-js');
+          if (scripts) {
+            setTimeout(() => appendComponentScripts(component, fromBase64Json(scripts)));
           }
 
           const locationHeader = response.headers.get('Hydro-Location');
@@ -481,7 +540,34 @@
       ? btoa(String.fromCodePoint(...new TextEncoder().encode(JSON.stringify(value))))
       : null;
   }
-  
+
+  function fromBase64Json(encoded) {
+    return encoded !== null && encoded !== undefined
+      ? JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(encoded), c => c.charCodeAt(0))))
+      : null;
+  }
+
+  function waitFor(objectName, maxTime) {
+    return new Promise((resolve, reject) => {
+      const check = () => {
+        if (window[objectName]) {
+          clearInterval(interval);
+          clearTimeout(timeout);
+          resolve(window[objectName]);
+        }
+      };
+
+      const interval = setInterval(check, 100);
+
+      const timeout = setTimeout(() => {
+        clearInterval(interval);
+        reject();
+      }, maxTime || 10000);
+
+      check();
+    });
+  }
+
   window.addEventListener('popstate', async function () {
     if (document.location.pathname + document.location.search === currentPathname) {
       return;
@@ -494,9 +580,12 @@
     hydroEvent,
     hydroBind,
     hydroAction,
+    enableHydroScripts,
     loadPageContent,
     findComponent,
     generateGuid,
+    waitFor,
+    executeComponentJs,
     config
   };
 }
@@ -684,6 +773,9 @@ document.addEventListener('alpine:init', () => {
       $component: null,
       init() {
         this.$component = window.Hydro.findComponent(this.$el);
+
+        let component = this.$el;
+        window.Hydro.enableHydroScripts(component);
       },
       async invoke(e, action) {
         if (["click", "submit"].includes(e.type) && ['A', 'BUTTON', 'FORM'].includes(this.$el.tagName)) {

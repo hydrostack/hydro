@@ -12,7 +12,7 @@ internal static class Base64
             return null;
         }
 
-        var json = JsonConvert.SerializeObject(input);
+        var json = JsonConvert.SerializeObject(input, HydroComponent.JsonSerializerSettings);
         var bytes = Encoding.UTF8.GetBytes(json);
         return Convert.ToBase64String(bytes);
     }

@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
 using Int32Converter = Hydro.Utils.Int32Converter;
 
@@ -30,19 +32,22 @@ public abstract class HydroComponent : ViewComponent
 
     private static readonly ConcurrentDictionary<Type, List<HydroPoll>> Polls = new();
 
+    private readonly List<string> _clientScripts = new();
     private readonly List<HydroComponentEvent> _dispatchEvents = new();
     private readonly HashSet<HydroEventSubscription> _subscriptions = new();
 
     private static readonly MethodInfo InvokeActionMethod = typeof(HydroComponent).GetMethod(nameof(InvokeAction), BindingFlags.Static | BindingFlags.NonPublic);
     private static readonly MethodInfo InvokeActionAsyncMethod = typeof(HydroComponent).GetMethod(nameof(InvokeActionAsync), BindingFlags.Static | BindingFlags.NonPublic);
 
-    private static readonly JsonSerializerSettings JsonSerializerSettings = new()
+    internal static readonly JsonSerializerSettings JsonSerializerSettings = new()
     {
-        Converters = new JsonConverter[] { new Int32Converter() }.ToList()
+        Converters = new JsonConverter[] { new Int32Converter() }.ToList(),
+        ReferenceLoopHandling = ReferenceLoopHandling.Ignore
     };
 
     private static readonly ConcurrentDictionary<Type, IHydroAuthorizationFilter[]> ComponentAuthorizationAttributes = new();
     private HydroOptions _options;
+    private ILogger<HydroComponent> _logger;
 
     /// <summary>
     /// Provides indication if ModelState is valid
@@ -79,8 +84,8 @@ public abstract class HydroComponent : ViewComponent
     public HydroComponent()
     {
         Subscribe<HydroBind>(data => SetPropertyValue(data.Name, data.Value));
-
         ConfigurePolls();
+        Client = new HydroClientActions(this);
     }
 
     private void ConfigurePolls()
@@ -136,12 +141,36 @@ public abstract class HydroComponent : ViewComponent
 
         var persistentState = HttpContext.RequestServices.GetService<IPersistentState>();
         _options = HttpContext.RequestServices.GetService<HydroOptions>();
+        _logger = HttpContext.RequestServices.GetService<ILogger<HydroComponent>>() ?? NullLogger<HydroComponent>.Instance;
 
-        var componentHtml = HttpContext.IsHydro(excludeBoosted: true)
-            ? await RenderOnlineComponent(persistentState)
-            : await RenderStaticComponent(persistentState);
+        if (persistentState == null || _options == null)
+        {
+            throw new ApplicationException("Hydro has not been initialized with UseHydro in the application startup.");
+        }
 
-        return new HtmlString(componentHtml);
+        try
+        {
+            var componentHtml = HttpContext.IsHydro(excludeBoosted: true)
+                ? await RenderOnlineComponent(persistentState)
+                : await RenderStaticComponent(persistentState);
+
+            return new HtmlString(componentHtml);
+        }
+        catch (Exception e)
+        {
+            HandleError(e);
+            return new HtmlString(string.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Handles unexpected errors during rendering
+    /// </summary>
+    public virtual void HandleError(Exception e)
+    {
+        var message = $"There was a problem with rendering Hydro component {GetType().Name}";
+        _logger.LogError(e, message);
+        Dispatch(new UnhandledHydroError(message, e), Scope.Global);
     }
 
     /// <summary>
@@ -261,7 +290,7 @@ public abstract class HydroComponent : ViewComponent
     /// <summary>
     /// Provides actions that can be executed on client side
     /// </summary>
-    public HydroClientActions Client { get; } = new();
+    public HydroClientActions Client { get; private set; }
 
     /// <summary>
     /// Triggered once the component is mounted
@@ -278,7 +307,7 @@ public abstract class HydroComponent : ViewComponent
     public virtual void Mount()
     {
     }
-    
+
     /// <summary>
     /// Triggered before each render
     /// </summary>
@@ -381,9 +410,10 @@ public abstract class HydroComponent : ViewComponent
         }
 
         PopulateDispatchers();
+        PopulateClientScripts();
 
         return !_skipOutput
-            ? await GenerateComponentHtml(componentId, persistentState)
+            ? await GenerateComponentHtml(componentId, persistentState, includeScripts: false)
             : string.Empty;
     }
 
@@ -405,7 +435,7 @@ public abstract class HydroComponent : ViewComponent
         IsMount = true;
         await MountAsync();
         await RenderAsync();
-        return await GenerateComponentHtml(componentId, persistentState);
+        return await GenerateComponentHtml(componentId, persistentState, includeScripts: true);
     }
 
     private static string GetComponentPlaceholderTemplate(string componentId) =>
@@ -424,7 +454,7 @@ public abstract class HydroComponent : ViewComponent
         IsMount = true;
         await MountAsync();
         await RenderAsync();
-        return await GenerateComponentHtml(componentId, persistentState);
+        return await GenerateComponentHtml(componentId, persistentState, includeScripts: true);
     }
 
     private string GenerateComponentId(string key)
@@ -438,7 +468,7 @@ public abstract class HydroComponent : ViewComponent
         return generateComponentId;
     }
 
-    private async Task<string> GenerateComponentHtml(string componentId, IPersistentState persistentState)
+    private async Task<string> GenerateComponentHtml(string componentId, IPersistentState persistentState, bool includeScripts)
     {
         var previousParentComponentId = HttpContext.Items[HydroConsts.Component.ParentComponentId];
         HttpContext.Items[HydroConsts.Component.ParentComponentId] = componentId;
@@ -476,6 +506,14 @@ public abstract class HydroComponent : ViewComponent
         foreach (var subscription in _subscriptions)
         {
             rootElement.AppendChild(GetEventSubscriptionScript(componentHtmlDocument, subscription));
+        }
+
+        if (includeScripts)
+        {
+            foreach (var script in _clientScripts)
+            {
+                rootElement.AppendChild(GetClientScript(componentHtmlDocument, script));
+            }
         }
 
         return rootElement.OuterHtml;
@@ -594,7 +632,7 @@ public abstract class HydroComponent : ViewComponent
         scriptNode.SetAttributeValue("type", "text/hydro");
         scriptNode.SetAttributeValue("hydro-event", "true");
         scriptNode.SetAttributeValue("x-data", "");
-        scriptNode.SetAttributeValue("x-on-hydro-event", JsonConvert.SerializeObject(eventData));
+        scriptNode.SetAttributeValue("x-on-hydro-event", JsonConvert.SerializeObject(eventData, JsonSerializerSettings));
         return scriptNode;
     }
 
@@ -603,6 +641,16 @@ public abstract class HydroComponent : ViewComponent
         var scriptNode = document.CreateElement("script");
         scriptNode.SetAttributeValue($"x-hydro-polling.{poll.Interval.TotalMilliseconds}ms._{index}", poll.Action);
         scriptNode.SetAttributeValue("type", "text/hydro");
+        return scriptNode;
+    }
+
+    private HtmlNode GetClientScript(HtmlDocument document, string script)
+    {
+        var scriptNode = document.CreateElement("script");
+        scriptNode.SetAttributeValue("hydro-js", "true");
+        scriptNode.SetAttributeValue("hydro-id", _componentId);
+        scriptNode.SetAttributeValue("type", "text/hydro");
+        scriptNode.InnerHtml = $"Hydro.executeComponentJs('{_componentId}', function() {{ {script} }});";
         return scriptNode;
     }
 
@@ -624,7 +672,19 @@ public abstract class HydroComponent : ViewComponent
             })
             .ToList();
 
-        HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.Trigger, JsonConvert.SerializeObject(data));
+        HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.Trigger, JsonConvert.SerializeObject(data, JsonSerializerSettings));
+    }
+    
+    private void PopulateClientScripts()
+    {
+        if (!_clientScripts.Any())
+        {
+            return;
+        }
+
+        HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.Scripts, Base64.Serialize(_clientScripts));
+
+        _clientScripts.Clear();
     }
 
     private bool IsComponentIdRendered(string componentId)
@@ -887,7 +947,7 @@ public abstract class HydroComponent : ViewComponent
             {
                 try
                 {
-                    var json = JsonConvert.SerializeObject(sourceProperty.GetValue(source));
+                    var json = JsonConvert.SerializeObject(sourceProperty.GetValue(source), JsonSerializerSettings);
                     sourceValue = JsonConvert.DeserializeObject(json, targetProperty.PropertyType);
                 }
                 catch
@@ -943,7 +1003,7 @@ public abstract class HydroComponent : ViewComponent
     {
         ModelState.Clear();
 
-        var context = new ValidationContext(this, serviceProvider: null, items: null);
+        var context = new ValidationContext(this, serviceProvider: HttpContext.RequestServices, items: null);
         var validationResults = new List<ValidationResult>();
         Validator.TryValidateObject(this, context, validationResults, true);
         var extractValidationResults = ExtractValidationResults(validationResults);
@@ -1007,6 +1067,9 @@ public abstract class HydroComponent : ViewComponent
 
         return true;
     }
+
+    internal void AddClientScript(string script) =>
+        _clientScripts.Add(script);
 
     private static string Hash(string input) =>
         $"W{Convert.ToHexString(MD5.HashData(Encoding.ASCII.GetBytes(input)))}";

@@ -50,7 +50,7 @@ internal static class HydroComponentsExtensions
                 {
                     logger.LogWarning(exception, "Antiforgery token not valid");
                     var requestToken = antiforgery.GetTokens(httpContext).RequestToken;
-                    httpContext.Response.Headers.Add(HydroConsts.ResponseHeaders.RefreshToken, requestToken);
+                    httpContext.Response.Headers.Append(HydroConsts.ResponseHeaders.RefreshToken, requestToken);
                     return Results.BadRequest(new { token = requestToken });
                 }
             }

@@ -97,6 +97,7 @@ public sealed class HydroOnTagHelper : TagHelper
         
         switch (methodCall.Method.Name)
         {
+            case nameof(HydroClientActions.ExecuteJs):
             case nameof(HydroClientActions.Invoke):
                 var expressionValue = EvaluateExpressionValue(methodCall.Arguments[0]);
                 return ReplaceJsQuotes(expressionValue?.ToString());
