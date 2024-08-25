@@ -12,7 +12,7 @@ the user experience. Those use cases usually refer to creating reusable componen
 - changing the currently highlighted element in a list using arrows
 - ...
 
-In practice it shouldn't be many places where JS is used, but it's good to have
+In practice, there shouldn't be many places where JS is used, but it's good to have
 an option to utilize it when needed.
 
 ## Using Alpine.js
@@ -45,18 +45,60 @@ Example. Create local JS state and operate on it.
 
 The only limitation is that you can't set a custom `x-data` attribute on the root element, that's why in the above example a nested div is introduced.
 
-## Using Hydro extensions
+## Using Hydro
 
-You can also invoke JavaScript code using [Hydro actions](/features/actions) together with `Model.Client.Invoke`:
+You can execute JavaScript code using [Hydro action handlers](/features/actions) in views or components code-behind.
+
+### Example of invoking JavaScript expression in the view:
 
 ```razor
+<!-- Search.cshtml -->
+
 @model Search
 
 <div>
   <button
     type="button"
-    hydro-on:click="@(() => Model.Client.Invoke("alert('test')"))">
+    hydro-on:click="@(() => Model.Client.ExecuteJs("alert('test')"))">
       Click me
   </button>
 </div>
 ```
+
+### Example of invoking JavaScript expression in the action handler:
+
+```c#
+// Counter.cshtml.cs
+
+public class Counter : HydroComponent
+{
+    public int Count { get; set; }
+    
+    public void Add()
+    {
+        Count++;
+        Client.ExecuteJs($"console.log({Count})");
+    }
+}
+```
+
+### Execution Context
+
+The context of execution the JS expression is the component DOM element, and can be accessed via `this`. Example:
+
+```c#
+// ProductDialog.cshtml.cs
+
+public class ProductDialog : HydroComponent
+{
+    [SkipOutput]
+    public void Close()
+    {
+        DispatchGlobal(new CloseDialog(nameof(ProductDialog)));
+        Client.ExecuteJs($"this.remove()");
+    }
+}
+```
+
+In the above example, first we dispatch an event to notify dialogs container to change the state, and then we invoke JS expression
+to remove dialog component DOM element immediately, without waiting for the state update.

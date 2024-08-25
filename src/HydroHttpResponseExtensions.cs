@@ -21,7 +21,7 @@ public static class HydroHttpResponseExtensions
             throw new ArgumentException("url is not provided", nameof(url));
         }
         
-        response.Headers.Add("Hydro-Redirect", new StringValues(url));
+        response.Headers.Append("Hydro-Redirect", new StringValues(url));
     }
 
     /// <summary>
@@ -44,6 +44,6 @@ public static class HydroHttpResponseExtensions
             payload
         };
 
-        response.Headers.Add("Hydro-Location", new StringValues(JsonConvert.SerializeObject(data)));
+        response.Headers.Append("Hydro-Location", new StringValues(JsonConvert.SerializeObject(data)));
     }
 }

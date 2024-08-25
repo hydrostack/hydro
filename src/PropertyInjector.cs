@@ -1,11 +1,11 @@
-﻿using System.Collections;
-using System.Collections.Concurrent;
-using System.ComponentModel;
-using System.Reflection;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
+using System.Collections;
+using System.Collections.Concurrent;
+using System.ComponentModel;
+using System.Reflection;
 
 namespace Hydro;
 
@@ -17,7 +17,7 @@ internal static class PropertyInjector
     public static string SerializeDeclaredProperties(Type type, object instance)
     {
         var regularProperties = GetRegularProperties(type, instance);
-        return JsonConvert.SerializeObject(regularProperties);
+        return JsonConvert.SerializeObject(regularProperties, HydroComponent.JsonSerializerSettings);
     }
 
     private static IDictionary<string, object> GetRegularProperties(Type type, object instance) =>
@@ -248,14 +248,14 @@ internal static class PropertyInjector
         {
             return valueToConvert;
         }
-        
+
         if (typeof(IFormFile).IsAssignableFrom(destinationType) && StringValues.IsNullOrEmpty(stringValues))
         {
             return null;
         }
 
         var converter = TypeDescriptor.GetConverter(destinationType!);
-   
+
         if (!converter.CanConvertFrom(typeof(string)))
         {
             throw new InvalidOperationException($"Cannot convert StringValues to '{destinationType}'.");
