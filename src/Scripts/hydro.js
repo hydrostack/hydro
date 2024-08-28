@@ -51,9 +51,8 @@
     func.call(document.getElementById(componentId));
   }
 
-  async function loadPageContent(url, selector, push, condition, payload) {
-    const element = document.querySelector(selector);
-    element.classList.add('hydro-loading');
+  async function loadPageContent(url, push, condition, payload) {
+    document.body.classList.add('hydro-loading');
 
     try {
       let headers = {
@@ -82,33 +81,34 @@
         document.dispatchEvent(new CustomEvent(`global:UnhandledHydroError`, { detail: { data: toBase64Json(eventDetail) } }));
         throw new Error(`HTTP error! status: ${response.status}`);
       } else {
-        let data = await response.text();
+        const data = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data, 'text/html');
+        const selector = response.headers.get('Hydro-Location-Target') || 'body'
+        const newContent = doc.querySelector(selector);
+        const html = newContent ? newContent.innerHTML : data;
 
-        let parser = new DOMParser();
-        let doc = parser.parseFromString(data, 'text/html');
-        let newContent = doc.querySelector(selector);
-        let newTitle = doc.querySelector('head>title');
-        element.innerHTML = newContent.innerHTML;
+        let newTitle = response.headers.get('Hydro-Location-Title') || doc.querySelector('head>title')?.textContent;
+        const element = document.querySelector(selector);
+        element.innerHTML = html;
 
         if (newTitle) {
-          document.title = newTitle.textContent;
+          document.title = newTitle;
         }
 
         if (push) {
           history.pushState({}, '', url);
         }
 
-        if (selector === 'body' && !window.location.hash) {
+        if (window.location.hash) {
+          document.querySelector(window.location.hash).scrollIntoView();
+        } else {
           window.scrollTo(0, 0);
         }
 
         currentPathname = document.location.pathname + document.location.search;
 
         enablePlainScripts(element);
-
-        document.dispatchEvent(new CustomEvent('HydroLocation', {
-          detail: { url, selector, push, payload }
-        }));
       }
     } catch (error) {
       if (error.message === 'Request stopped') {
@@ -117,7 +117,7 @@
         window.location.href = url;
       }
     } finally {
-      element.classList.remove('hydro-loading');
+      document.body.classList.remove('hydro-loading');
     }
   }
 
@@ -453,7 +453,7 @@
           if (locationHeader) {
             let locationData = JSON.parse(locationHeader);
 
-            await loadPageContent(locationData.path, locationData.target || 'body', true, null, locationData.payload);
+            await loadPageContent(locationData.path, true, null, locationData.payload);
           }
 
           const redirectHeader = response.headers.get('Hydro-Redirect');
@@ -573,7 +573,7 @@
       return;
     }
 
-    await loadPageContent(window.location.href, 'body', false);
+    await loadPageContent(window.location.href, false);
   });
 
   return {
@@ -740,7 +740,7 @@ document.addEventListener('alpine:init', () => {
         currentBoostUrl = url;
         const classTimeout = setTimeout(() => link.classList.add('hydro-request'), 200);
         try {
-          await window.Hydro.loadPageContent(url, 'body', true, () => currentBoostUrl === url);
+          await window.Hydro.loadPageContent(url, true, () => currentBoostUrl === url);
         } finally {
           clearTimeout(classTimeout);
           link.classList.remove('hydro-request')

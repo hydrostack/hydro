@@ -13,6 +13,8 @@ internal static class HydroConsts
     public static class ResponseHeaders
     {
         public const string Trigger = "Hydro-Trigger";
+        public const string LocationTarget = "Hydro-Location-Target";
+        public const string LocationTitle = "Hydro-Location-Title";
         public const string OperationId = "Hydro-Operation-Id";
         public const string SkipOutput = "Hydro-Skip-Output";
         public const string RefreshToken = "Refresh-Antiforgery-Token";
