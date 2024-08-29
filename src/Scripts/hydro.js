@@ -427,7 +427,7 @@
                   from.checked = to.checked;
                 }
 
-                if (from.tagName === "INPUT" && ['text', 'number', 'date'].includes(from.type) && from.value !== to.getAttribute("value")) {
+                if (from.tagName === "INPUT" && ['password', 'text', 'number', 'date', 'email'].includes(from.type) && from.value !== to.getAttribute("value")) {
                   if (document.activeElement === from) {
                     if (morphActiveElement && from.value !== to.value) {
                       from.value = to.value;
@@ -520,7 +520,7 @@
       if (element.checked !== element.defaultChecked) {
         return true;
       }
-    } else if (['hidden', 'password', 'text', 'textarea', 'number', 'date'].includes(type)) {
+    } else if (['hidden', 'password', 'text', 'textarea', 'number', 'date', 'email'].includes(type)) {
       if (element.value !== element.defaultValue) {
         return true;
       }
