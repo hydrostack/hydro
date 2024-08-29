@@ -61,6 +61,11 @@ public abstract class HydroComponent : ViewComponent
     protected string Key { get; private set; }
 
     /// <summary>
+    /// Default identifier used to specify place of the page to replace when during location change
+    /// </summary>
+    public const string LocationTargetId = "hydro";
+    
+    /// <summary>
     /// Provides list of already accessed component's properties  
     /// </summary>
     public HashSet<string> TouchedProperties { get; set; } = new();

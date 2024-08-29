@@ -44,7 +44,84 @@ public class MyPage : HydroComponent
 }
 ```
 
-After triggering Hydro action `About` user will be navigated to page `/About/Index` in a smooth manner, without reload.
+## Choosing the target selector during navigation
+
+Often when navigating to another page, the only part of the page that is changing is the content section, while layout remains the same. In those cases
+we can disable layout rendering, send only the content section, and instruct Hydro where to put it. It can be achieved by using `HydroTarget`:
+
+```razor
+// Layout.cshtml
+
+<html>
+<head>
+  <meta name="hydro-config" />
+  <title>Test</title>
+  <script defer src="~/hydro/hydro.js" asp-append-version="true"></script>
+  <script defer src="~/hydro/alpine.js" asp-append-version="true"></script>
+</head>
+
+<body>
+
+<ul hydro-link>
+  <a href="/">Home</a>
+  <a href="/products">Product</a>
+</ul>
+
+<div id="content">
+  @RenderBody()
+</div>
+
+</body>
+</html>
+```
+
+```razor
+// Index.cshtml
+
+@{
+  if (HttpContext.IsHydro())
+  {
+    Layout = null;
+    this.HydroTarget("#content");
+  }
+}
+
+Content of the page
+```
+
+We are using here `#content` as the target, but it's also possible to use Hydro's predefined identifier `#hydro`, example:
+
+```razor
+<div id="@HydroComponent.LocationTargetId">
+  @RenderBody()
+</div>
+
+or
+
+<div id="hydro">
+  @RenderBody()
+</div>
+```
+
+```c#
+this.HydroTarget(); // selector will be set to #hydro
+```
+
+`HydroTarget` has also an optional parameter `title`, which is used to set the title of loaded page. Example:
+
+```razor
+// Index.cshtml
+
+@{
+  if (HttpContext.IsHydro())
+  {
+    Layout = null;
+    this.HydroTarget(title: "Home");
+  }
+}
+
+Content of the page
+```
 
 ### Passing the payload
 
