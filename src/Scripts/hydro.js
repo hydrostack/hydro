@@ -167,11 +167,12 @@
   let binding = {};
   let dirty = {};
 
-  async function hydroEvent(el, url, eventData) {
+  async function hydroEvent(el, hydroEventRaw, url, eventData) {
     const operationId = eventData.operationId;
-    const hydroEvent = el.getAttribute("x-on-hydro-event");
-    const wireEventData = JSON.parse(hydroEvent);
-    await hydroRequest(el, url, { eventData: { name: wireEventData.name, data: eventData.data, subject: eventData.subject } }, 'event', wireEventData, operationId);
+    const hydroEvent = JSON.parse(hydroEventRaw);
+    el.setAttribute("data-operation-id", operationId);
+
+    await hydroRequest(el, url, { eventData: { name: hydroEvent.name, data: eventData.data, subject: eventData.subject } }, 'event', hydroEvent, operationId);
   }
 
   function hydroDispatch(el, event, operationId) {
@@ -315,15 +316,13 @@
     if (operationId) {
       if (!operationStatus[operationId]) {
         operationStatus[operationId] = 0;
+      }
 
-        const operationTrigger = document.querySelector(`[data-operation-id="${operationId}"]`);
+      if (el.getAttribute('data-operation-id') === operationId) {
+        classTimeout = setTimeout(() => el.classList.add('hydro-request'), 200);
 
-        if (operationTrigger) {
-          classTimeout = setTimeout(() => operationTrigger.classList.add('hydro-request'), 200);
-
-          if (type !== 'bind') {
-            disableTimer = setTimeout(() => operationTrigger.disabled = true, 200);
-          }
+        if (type !== 'bind') {
+          disableTimer = setTimeout(() => el.disabled = true, 200);
         }
       }
 
@@ -751,9 +750,11 @@ document.addEventListener('alpine:init', () => {
       const globalEventName = data.subject ? `global:${data.name}:${data.subject}` : `global:${data.name}`;
       const localEventName = data.subject ? `${component.id}:${data.name}:${data.subject}` : `${component.id}:${data.name}`;
       const eventPath = data.path;
+      const componentElement = component.element;
+      const eventData = el.getAttribute("x-on-hydro-event")
 
       const eventHandler = async (event) => {
-        await window.Hydro.hydroEvent(el, eventPath, event.detail);
+        await window.Hydro.hydroEvent(componentElement, eventData, eventPath, event.detail);
       }
 
       document.addEventListener(globalEventName, eventHandler);
