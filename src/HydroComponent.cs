@@ -660,7 +660,7 @@ public abstract class HydroComponent : ViewComponent
         var scriptNode = document.CreateElement("script");
         scriptNode.SetAttributeValue("hydro-js", "true");
         scriptNode.SetAttributeValue("hydro-id", _componentId);
-        scriptNode.SetAttributeValue("type", "text/hydro");
+        scriptNode.SetAttributeValue("type", "text/javascript");
         scriptNode.InnerHtml = $"Hydro.executeComponentJs('{_componentId}', function() {{ {script} }});";
         return scriptNode;
     }

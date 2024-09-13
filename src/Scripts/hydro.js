@@ -40,7 +40,7 @@
   }
 
   function enablePlainScripts(element) {
-    enableScripts(element, 'script[type="text/javascript"]:not([hydro-loaded])');
+    enableScripts(element, 'script[type="text/javascript"]:not([hydro-loaded]):not([hydro-js])');
   }
 
   function enableHydroScripts(componentElement) {
@@ -48,7 +48,13 @@
   }
 
   function executeComponentJs(componentId, func) {
-    func.call(document.getElementById(componentId));
+    const callback = () => func.call(document.getElementById(componentId))
+
+    if (document.readyState === "complete") {
+      setTimeout(callback);
+    } else {
+      document.addEventListener("DOMContentLoaded", callback);
+    }
   }
 
   async function loadPageContent(url, push, condition, payload) {
