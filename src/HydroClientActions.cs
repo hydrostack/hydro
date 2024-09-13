@@ -1,3 +1,5 @@
+using JetBrains.Annotations;
+
 namespace Hydro;
 
 /// <summary>
@@ -14,14 +16,14 @@ public class HydroClientActions
     /// Execute JavaScript expression on client side
     /// </summary>
     /// <param name="jsExpression">JavaScript expression</param>
-    public void ExecuteJs(string jsExpression) =>
+    public void ExecuteJs([LanguageInjection(InjectedLanguage.JAVASCRIPT)] string jsExpression) =>
         _hydroComponent.AddClientScript(jsExpression);
-    
+
     /// <summary>
     /// Invoke JavaScript expression on client side
     /// </summary>
     /// <param name="jsExpression">JavaScript expression</param>
     [Obsolete("Use ExecuteJs instead.")]
-    public void Invoke(string jsExpression) =>
+    public void Invoke([LanguageInjection(InjectedLanguage.JAVASCRIPT)] string jsExpression) =>
         ExecuteJs(jsExpression);
 }
