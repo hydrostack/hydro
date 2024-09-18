@@ -275,7 +275,7 @@
     const componentId = component.getAttribute("id");
 
     if (!component) {
-      throw new Erorr('Cannot determine the closest Hydro component');
+      throw new Error('Cannot determine the closest Hydro component');
     }
 
     const parentComponent = findComponent(component.parentElement);
