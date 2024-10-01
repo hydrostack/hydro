@@ -324,7 +324,8 @@
         requestForm.append('__hydro_type', type);
 
         if (requestData.parameters) {
-          requestForm.append('__hydro_parameters', JSON.stringify(requestData.parameters))
+          const paramsData = JSON.stringify(requestData.parameters, (k, v) => v === undefined ? null : v);
+          requestForm.append('__hydro_parameters', paramsData)
         }
 
         if (requestData.eventData) {
@@ -435,7 +436,7 @@
                   from.checked = to.checked;
                 }
 
-                if (from.tagName === "INPUT" && ['password', 'text', 'number', 'date', 'email'].includes(from.type) && from.value !== to.getAttribute("value")) {
+                if ((from.tagName === "SELECT" || (from.tagName === "INPUT" && ['password', 'text', 'number', 'date', 'email'].includes(from.type))) && from.value !== to.value) {
                   if (document.activeElement === from) {
                     if (morphActiveElement && from.value !== to.value) {
                       from.value = to.value;
