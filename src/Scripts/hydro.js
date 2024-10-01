@@ -207,9 +207,11 @@
       formData.set(propertyName, el.checked);
     } else if (el.tagName === "INPUT" && el.type === 'file') {
       if (el.files.length) {
-        formData.set(propertyName, el.files[0]);
+        Array.from(el.files).forEach((file) => {
+          formData.append(propertyName, file);
+        });
       } else {
-        formData.set(propertyName, new Blob(), '');
+        formData.set(propertyName, '');
       }
     } else {
       formData.set(propertyName, el.value);

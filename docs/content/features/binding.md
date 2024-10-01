@@ -142,6 +142,56 @@ which we can use later when submitting the form.
 
 > NOTE: Make sure the temporary storage is cleared periodically.
 
+### Multiple files
+
+To support multiple files in one field, you can use the `multiple` attribute:
+
+```razor
+<!-- AddAttachment.cshtml -->
+
+@model AddAttachment
+
+<div>
+  <input
+    asp-for="DocumentFile"
+    type="file"
+    multiple
+    hydro-bind />
+</div>
+```
+
+Then your component code would change to:
+
+
+```c#
+// AddAttachment.cshtml.cs
+
+public class AddAttachment : HydroComponent
+{
+    [Transient]
+    public IFormFile[] DocumentFiles { get; set; }
+
+    [Required]
+    public List<string> DocumentIds { get; set; }
+
+    public override async Task BindAsync(PropertyPath property, object value)
+    {
+        if (property.Name == nameof(DocumentFiles))
+        {
+            DocumentIds = [];
+            var files = (IFormFile[])value;
+
+            foreach (var file in files)
+            {
+                DocumentIds.Add(await GetStoredTempFileId(file));
+            }
+        }
+    }
+
+    // rest of the file same as in the previous example
+}
+```
+
 ## Styling
 
 `.hydro-request` CSS class is toggled on the elements that are currently in the binding process

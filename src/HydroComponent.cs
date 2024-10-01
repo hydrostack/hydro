@@ -64,7 +64,7 @@ public abstract class HydroComponent : ViewComponent
     /// Default identifier used to specify place of the page to replace when during location change
     /// </summary>
     public const string LocationTargetId = "hydro";
-    
+
     /// <summary>
     /// Provides list of already accessed component's properties  
     /// </summary>
@@ -569,15 +569,33 @@ public abstract class HydroComponent : ViewComponent
             }
         }
 
-        foreach (var file in formCollection.Files)
+        var fileGroups = formCollection.Files.GroupBy(m => m.Name);
+
+        foreach (var fileGroup in fileGroups)
         {
-            var setter = PropertyInjector.GetPropertySetter(this, file.Name, file);
-            var propertyPath = PropertyPath.ExtractPropertyPath(file.Name);
+            var setter = PropertyInjector.GetPropertySetter(this, fileGroup.Key, null);
+            var propertyPath = PropertyPath.ExtractPropertyPath(fileGroup.Key);
 
             if (setter != null)
             {
-                setter.Value.Setter(file);
-                await BindAsync(propertyPath, file);
+                if (setter.Value.PropertyType.IsArray)
+                {
+                    var formFiles = fileGroup.ToArray();
+                    setter.Value.Setter(formFiles);
+                    await BindAsync(propertyPath, formFiles);
+                }
+                else if (typeof(IEnumerable<IFormFile>).IsAssignableFrom(setter.Value.PropertyType))
+                {
+                    var formFiles = fileGroup.ToList();
+                    setter.Value.Setter(formFiles);
+                    await BindAsync(propertyPath, formFiles);
+                }
+                else if (setter.Value.PropertyType == typeof(IFormFile))
+                {
+                    var formFile = fileGroup.First();
+                    setter.Value.Setter(formFile);
+                    await BindAsync(propertyPath, formFile);                    
+                }
             }
             else
             {
@@ -685,7 +703,7 @@ public abstract class HydroComponent : ViewComponent
 
         HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.Trigger, JsonConvert.SerializeObject(data, JsonSerializerSettings));
     }
-    
+
     private void PopulateClientScripts()
     {
         if (!_clientScripts.Any())

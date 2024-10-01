@@ -98,7 +98,7 @@ internal static class PropertyInjector
         propertyInfo.SetValue(currentObject, convertedValue);
     }
 
-    public static (object Value, Action<object> Setter)? GetPropertySetter(object target, string propertyPath, object value)
+    public static (object Value, Action<object> Setter, Type PropertyType)? GetPropertySetter(object target, string propertyPath, object value)
     {
         if (target == null)
         {
@@ -186,7 +186,7 @@ internal static class PropertyInjector
         return (Convert.ToInt32(iteratorValue), cleanedPropName);
     }
 
-    private static (object, Action<object>)? SetValueOnObject(object obj, string propName, object valueToSet)
+    private static (object, Action<object>, Type)? SetValueOnObject(object obj, string propName, object valueToSet)
     {
         if (obj == null)
         {
@@ -211,10 +211,10 @@ internal static class PropertyInjector
 
         var convertedValue = ConvertValue(valueToSet, propertyInfo.PropertyType);
         propertyInfo.SetValue(obj, convertedValue);
-        return (convertedValue, val => propertyInfo.SetValue(obj, val));
+        return (convertedValue, val => propertyInfo.SetValue(obj, val), propertyInfo.PropertyType);
     }
 
-    private static (object, Action<object>)? SetIndexedValue(object obj, string propName, object valueToSet)
+    private static (object, Action<object>, Type)? SetIndexedValue(object obj, string propName, object valueToSet)
     {
         var (index, cleanedPropName) = GetIndexAndCleanedPropertyName(propName);
         var propertyInfo = obj.GetType().GetProperty(cleanedPropName);
@@ -234,7 +234,7 @@ internal static class PropertyInjector
                 throw new InvalidOperationException("Wrong type");
             }
 
-            return (convertedValue, val => array.SetValue(val, index));
+            return (convertedValue, val => array.SetValue(val, index), propertyInfo!.PropertyType);
         }
 
         if (typeof(IList).IsAssignableFrom(propertyInfo.PropertyType))
@@ -244,7 +244,7 @@ internal static class PropertyInjector
                 throw new InvalidOperationException("Wrong type");
             }
 
-            return (convertedValue, val => list[index] = val);
+            return (convertedValue, val => list[index] = val, propertyInfo!.PropertyType);
         }
 
         throw new InvalidOperationException($"Indexed access for property '{cleanedPropName}' is not supported.");
@@ -260,6 +260,16 @@ internal static class PropertyInjector
         if (typeof(IFormFile).IsAssignableFrom(destinationType) && StringValues.IsNullOrEmpty(stringValues))
         {
             return null;
+        }
+        
+        if (typeof(IFormFile[]).IsAssignableFrom(destinationType) && StringValues.IsNullOrEmpty(stringValues))
+        {
+            return Array.Empty<IFormFile>();
+        }
+        
+        if (typeof(IEnumerable<IFormFile>).IsAssignableFrom(destinationType) && StringValues.IsNullOrEmpty(stringValues))
+        {
+            return new List<IFormFile>();
         }
 
         var converter = TypeDescriptor.GetConverter(destinationType!);
