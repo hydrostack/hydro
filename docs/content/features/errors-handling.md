@@ -46,6 +46,7 @@ app.UseExceptionHandler(b => b.Run(async context =>
 {
     if (!context.IsHydro())
     {
+        context.Response.Redirect("/Error");
         return;
     }
     
