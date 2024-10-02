@@ -68,10 +68,10 @@ public sealed class HydroComponentTagHelper : TagHelper
     public int? Delay { get; set; } = 0;
 
     /// <summary>
-    /// 
+    /// Component's HTML behavior when the key changes
     /// </summary>
-    [HtmlAttributeName("run")]
-    public bool Run { get; set; }
+    [HtmlAttributeName("key-behavior")]
+    public KeyBehavior KeyBehavior { get; set; } = KeyBehavior.Replace;
 
     /// <summary>
     /// Processes the tag helper
@@ -89,7 +89,8 @@ public sealed class HydroComponentTagHelper : TagHelper
         var componentHtml = await viewComponentHelper.InvokeAsync(Name, new
         {
             parameters = Parameters ?? _parameters,
-            key = Key
+            key = Key,
+            keyBehavior = KeyBehavior
         });
 
         output.Content.SetHtmlContent(componentHtml);

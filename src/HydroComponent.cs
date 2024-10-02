@@ -59,6 +59,12 @@ public abstract class HydroComponent : ViewComponent
     /// </summary>
     [JsonProperty]
     protected string Key { get; private set; }
+    
+    /// <summary>
+    /// Component's HTML behavior when the key changes
+    /// </summary>
+    [JsonProperty]
+    protected KeyBehavior KeyBehavior { get; private set; }
 
     /// <summary>
     /// Default identifier used to specify place of the page to replace when during location change
@@ -138,12 +144,14 @@ public abstract class HydroComponent : ViewComponent
     /// </summary>
     /// <param name="parameters">An object with component parameters</param>
     /// <param name="key">Local identifier to distinguish components of same type</param>
-    public async Task<IHtmlContent> InvokeAsync(object parameters = null, string key = null)
+    /// <param name="keyBehavior">Component's HTML behavior when the key changes</param>
+    public async Task<IHtmlContent> InvokeAsync(object parameters = null, string key = null, KeyBehavior keyBehavior = KeyBehavior.Replace)
     {
         ApplyParameters(parameters);
 
         ViewContext.ViewData.TemplateInfo.HtmlFieldPrefix = null;
         Key = key;
+        KeyBehavior = keyBehavior;
 
         var persistentState = HttpContext.RequestServices.GetService<IPersistentState>();
         _options = HttpContext.RequestServices.GetService<HydroOptions>();
@@ -430,7 +438,7 @@ public abstract class HydroComponent : ViewComponent
 
         if (IsComponentIdRendered(componentId))
         {
-            return GetComponentPlaceholderTemplate(componentId, Key);
+            return GetComponentPlaceholderTemplate(componentId, Key, KeyBehavior);
         }
 
         if (!await AuthorizeAsync())
@@ -444,8 +452,12 @@ public abstract class HydroComponent : ViewComponent
         return await GenerateComponentHtml(componentId, persistentState, includeScripts: true);
     }
 
-    private static string GetComponentPlaceholderTemplate(string componentId, string key) =>
-        $"<div id=\"{componentId}\" {(!string.IsNullOrWhiteSpace(key) ? $"key=\"{key}\"" : "")} hydro hydro-placeholder></div>";
+    private static string GetComponentPlaceholderTemplate(string componentId, string key, KeyBehavior keyBehavior)
+    {
+        var useKey = !string.IsNullOrWhiteSpace(key) && keyBehavior == KeyBehavior.Replace;
+        
+        return $"<div id=\"{componentId}\" {(useKey ? $"key=\"{key}\"" : "")} hydro hydro-placeholder></div>";
+    }
 
     private async Task<string> RenderStaticComponent(IPersistentState persistentState)
     {
@@ -496,7 +508,7 @@ public abstract class HydroComponent : ViewComponent
         rootElement.SetAttributeValue("hydro-name", GetType().Name);
         rootElement.SetAttributeValue("x-data", "hydro");
 
-        if (!string.IsNullOrWhiteSpace(Key))
+        if (!string.IsNullOrWhiteSpace(Key) && KeyBehavior == KeyBehavior.Replace)
         {
             rootElement.SetAttributeValue("key", Key);
         }
