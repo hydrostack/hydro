@@ -33,8 +33,10 @@ internal static class PropertyInjector
         var viewComponentType = typeof(ViewComponent);
         var hydroComponentType = typeof(HydroComponent);
 
+        var baseProps = new[] { "Key", "KeyBehavior" };
+        
         var propertyInfos = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-            .Where(p => (p.Name == "Key" && p.DeclaringType == hydroComponentType)
+            .Where(p => (baseProps.Contains(p.Name) && p.DeclaringType == hydroComponentType)
                         || (p.DeclaringType != viewComponentType
                             && p.GetGetMethod()?.IsPublic == true
                             && p.GetSetMethod()?.IsPublic == true
