@@ -217,7 +217,7 @@
       formData.set(propertyName, el.value);
     }
 
-    el.setAttribute("hydro-operation-id", binding[component.id].operationId);
+    el.setAttribute("data-operation-id", binding[component.id].operationId);
     el.classList.add('hydro-request');
 
     if (bindAlreadyInitialized) {
@@ -261,7 +261,7 @@
     }
 
     const operationId = generateGuid();
-    el.setAttribute("hydro-operation-id", operationId);
+    el.setAttribute("data-operation-id", operationId);
 
     await hydroRequest(el, url, { parameters: action.parameters }, 'action', null, operationId, true);
   }
@@ -289,7 +289,7 @@
       if (!operationStatus[operationId]) {
         operationStatus[operationId] = 0;
 
-        const operationTrigger = document.querySelector(`[hydro-operation-id="${operationId}"]`);
+        const operationTrigger = document.querySelector(`[data-operation-id="${operationId}"]`);
 
         if (operationTrigger) {
           classTimeout = setTimeout(() => operationTrigger.classList.add('hydro-request'), 200);
@@ -402,16 +402,16 @@
                   }
                 }
 
-                if (from.getAttribute && from.getAttribute("hydro-operation-id")) {
+                if (from.getAttribute && from.getAttribute("data-operation-id")) {
                   // skip result from bind operation when this operating element is not a hydro component and is awaiting a request already
-                  if (type === 'bind' && operationId !== from.getAttribute("hydro-operation-id") && from.getAttribute("hydro") === null) {
+                  if (type === 'bind' && operationId !== from.getAttribute("data-operation-id") && from.getAttribute("hydro") === null) {
                     skip();
                     counter++;
                     return;
                   }
 
                   // set the operation id, disabled state and hydro class that would be lost after morph
-                  to.setAttribute("hydro-operation-id", from.getAttribute("hydro-operation-id"));
+                  to.setAttribute("data-operation-id", from.getAttribute("data-operation-id"));
                   to.disabled = from.disabled;
                   if (from.classList.contains('hydro-request')) {
                     to.classList.add('hydro-request');
@@ -507,14 +507,14 @@
           clearTimeout(disableTimer);
 
           if (operationId) {
-            const operationTrigger = document.querySelectorAll(`[hydro-operation-id="${operationId}"]`);
+            const operationTrigger = document.querySelectorAll(`[data-operation-id="${operationId}"]`);
             operationStatus[operationId]--;
 
             if (operationTrigger.length && (operationStatus[operationId] <= 0)) {
               operationTrigger.forEach(trigger => {
                 trigger.disabled = false;
                 trigger.classList.remove('hydro-request');
-                trigger.removeAttribute('hydro-operation-id');
+                trigger.removeAttribute('data-operation-id');
               })
             }
           }
@@ -634,7 +634,7 @@ document.addEventListener('alpine:init', () => {
         event.preventDefault();
 
         const operationId = window.Hydro.generateGuid();
-        el.setAttribute("hydro-operation-id", operationId);
+        el.setAttribute("data-operation-id", operationId);
 
         const eventName = `${scope}:${trigger.name}`;
         const eventData = {
