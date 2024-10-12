@@ -87,14 +87,11 @@ public class ProductList : HydroComponent
 }
 ```
 
-In this case using a Hydro action might be an overkill, since it will cause an unnecessary additional request and rendering of the component.
-
-To avoid that, you can dispatch actions straight from your client code by using a `hydro-dispatch` tag helper:
+In this case using a Hydro action might be an overkill, since it will cause an unnecessary additional request and rendering of the component. To avoid that, you can dispatch actions straight from your client code by using a `hydro-dispatch` tag helper:
 
 ```razor
-<button type="button"
-    hydro-dispatch="@(new OpenAddModal())"
-    event-scope="@Scope.Global">
+<button 
+    hydro-on:click="@(() => Model.Client.Dispatch(new OpenAddModal())">
   Add
 </button>
 ```
