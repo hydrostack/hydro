@@ -51,7 +51,7 @@ Examples:
 
 <div hydro-on:click.outside="@(() => Model.Close())">
 
-<input type="text" hydro-on:keyup.shift.enter="@(() => Model.Save())">
+<input type="text" hydro-on:keyup.shift.enter="@(() => Model.Save())" />
 ```
 
 ## Parameters
@@ -116,7 +116,7 @@ public class Content : HydroComponent
 
 @model Content
 <div>
-  <input type="text" id="myInput">
+  <input type="text" id="myInput" />
   <button hydro-on:click="@(() => Model.Update(Param.JS("window.myInput.value")))">
     Update content
   </button>

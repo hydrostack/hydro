@@ -174,6 +174,33 @@
     await hydroRequest(el, url, { eventData: { name: wireEventData.name, data: eventData.data, subject: eventData.subject } }, 'event', wireEventData, operationId);
   }
 
+  function hydroDispatch(el, event, operationId) {
+    const component = findComponent(el);
+    const parentComponent = findComponent(component.element.parentElement);
+
+    if (event.scope === 'parent' && !parentComponent) {
+      return;
+    }
+
+    const scope = event.scope === 'parent' ? parentComponent.id : 'global';
+
+    const eventName = `${scope}:${event.name}`;
+    const eventData = {
+      detail: {
+        data: event.data,
+        subject: event.subject,
+        operationId
+      }
+    };
+
+    document.dispatchEvent(new CustomEvent(eventName, eventData));
+
+    if (event.subject) {
+      const subjectEventName = `${scope}:${event.name}:${event.subject}`;
+      document.dispatchEvent(new CustomEvent(subjectEventName, eventData));
+    }
+  }
+
   async function hydroBind(el, debounce) {
     if (!isElementDirty(el)) {
       return;
@@ -592,6 +619,7 @@
     enableHydroScripts,
     loadPageContent,
     findComponent,
+    hydroDispatch,
     generateGuid,
     waitFor,
     executeComponentJs,
@@ -791,6 +819,12 @@ document.addEventListener('alpine:init', () => {
           e.preventDefault();
         }
         await window.Hydro.hydroAction(this.$el, this.$component, action);
+      },
+      async dispatch(e, event) {
+        const el = this.$el;
+        const operationId = window.Hydro.generateGuid();
+        el.setAttribute("data-operation-id", operationId);
+        window.Hydro.hydroDispatch(el, event, operationId);
       },
       async bind(debounce) {
         let element = this.$el;

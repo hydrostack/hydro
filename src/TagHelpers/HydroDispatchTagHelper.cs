@@ -11,6 +11,7 @@ namespace Hydro.TagHelpers;
 /// Provides a binding from the DOM element to the Hydro action
 /// </summary>
 [HtmlTargetElement("*", Attributes = DispatchAttribute)]
+[Obsolete("Use hydro-on instead")]
 public sealed class HydroDispatchTagHelper : TagHelper
 {
     private const string DispatchAttribute = "hydro-dispatch";

@@ -1,4 +1,5 @@
 ﻿using System.Linq.Expressions;
+using Hydro.Utils;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
@@ -50,13 +51,13 @@ public sealed class HydroOnTagHelper : TagHelper
             return;
         }
 
-        foreach (var eventItem in _handlers)
+        foreach (var eventItem in _handlers.Where(h => h.Value != null))
         {
             if (eventItem.Value is not LambdaExpression actionExpression)
             {
                 throw new InvalidOperationException($"Wrong event handler statement in component for {modelType.Namespace}");
             }
-            
+
             var jsExpression = GetJsExpression(actionExpression);
 
             if (jsExpression == null)
@@ -77,37 +78,86 @@ public sealed class HydroOnTagHelper : TagHelper
 
     private static string GetJsExpression(LambdaExpression expression)
     {
-        var clientAction = GetJsClientActionExpression(expression);
-
-        if (clientAction != null)
+        if (expression is not { Body: MethodCallExpression methodCall })
         {
-            return clientAction;
+            throw new InvalidOperationException("Hydro action should contain a method call.");
         }
 
-        return GetJsInvokeExpression(expression);
-    }
-
-    private static string GetJsClientActionExpression(LambdaExpression expression)
-    {
-        if (expression is not { Body: MethodCallExpression methodCall }
-            || methodCall.Method.DeclaringType != typeof(HydroClientActions))
-        {
-            return null;
-        }
+        var methodDeclaringType = methodCall.Method.DeclaringType;
         
-        switch (methodCall.Method.Name)
+        if (methodDeclaringType == typeof(HydroClientActions))
+        {
+            return GetClientActionExpression(expression);
+        }
+
+        return GetActionInvokeExpression(expression);
+    }
+    
+    private static string GetClientActionExpression(LambdaExpression expression)
+    {
+        var methodCall = (MethodCallExpression)expression.Body;
+
+        var methodName = methodCall.Method.Name;
+        
+        switch (methodName)
         {
             case nameof(HydroClientActions.ExecuteJs):
             case nameof(HydroClientActions.Invoke):
-                var expressionValue = EvaluateExpressionValue(methodCall.Arguments[0]);
-                return ReplaceJsQuotes(expressionValue?.ToString());
-            
+                var jsExpressionValue = EvaluateExpressionValue(methodCall.Arguments[0]);
+                return ReplaceJsQuotes(jsExpressionValue?.ToString());
+
+            case nameof(HydroComponent.Dispatch):
+            case nameof(HydroComponent.DispatchGlobal):
+                return GetDispatchInvokeExpression(expression, methodName);
+
             default:
                 return null;
         }
     }
 
-    private static string GetJsInvokeExpression(LambdaExpression expression)
+    private static string GetDispatchInvokeExpression(LambdaExpression expression, string methodName)
+    {
+        var dispatchData = expression.GetNameAndParameters();
+
+        if (dispatchData == null)
+        {
+            return null;
+        }
+
+        var parameters = dispatchData.Value.Parameters;
+                
+        var data = parameters["data"];
+        var scope = methodName == nameof(HydroComponent.DispatchGlobal) 
+            ? Scope.Global 
+            : GetParam<Scope>(parameters, "scope");
+        var subject = GetParam<string>(parameters, "subject");
+
+        var invokeData = new
+        {
+            name = GetFullTypeName(data.GetType()),
+            data = Base64.Serialize(data),
+            scope = scope.ToString().ToLower(),
+            subject = subject
+        };
+
+        var invokeJson = JsonConvert.SerializeObject(invokeData, JsonSettings.SerializerSettings);
+        var invokeJsObject = DecodeJsExpressionsInJson(invokeJson);
+
+        return $"dispatch($event, {invokeJsObject})";
+    }
+
+    private static T GetParam<T>(IDictionary<string, object> parameters, string name, T fallback = default) =>
+        (T)(parameters.TryGetValue(name, out var value)
+            ? value is T ? value : default(T)
+            : default(T)
+        );
+
+    private static string GetFullTypeName(Type type) =>
+        type.DeclaringType != null
+            ? type.DeclaringType.Name + "+" + type.Name
+            : type.Name;
+
+    private static string GetActionInvokeExpression(LambdaExpression expression)
     {
         var eventData = expression.GetNameAndParameters();
 
