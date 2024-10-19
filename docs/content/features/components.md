@@ -15,9 +15,9 @@ The place for keeping the components depends on your project settings. In Razor 
 
 Let's see it in action:
 ```c#
-// ~/Pages/Components/Counter.cshtml.cs
+// ~/Pages/Components/PageCounter.cshtml.cs
 
-public class Counter : HydroComponent
+public class PageCounter : HydroComponent
 {
     public int Count { get; set; }
     
@@ -29,9 +29,9 @@ public class Counter : HydroComponent
 ```
 
 ```razor
-<!-- ~/Pages/Components/Counter.cshtml -->
+<!-- ~/Pages/Components/PageCounter.cshtml -->
 
-@model Counter
+@model PageCounter
 
 <div>
   Count: <strong>@Model.Count</strong>
@@ -51,32 +51,23 @@ Notes about the above code:
 
 To use your new component, you can render it in your Razor Page (e.g. `Index.cshtml`) or in another Hydro component. There are several ways to do it:
 
-via Hydro tag helper:
+by calling a custom tag using dash-case notation:
 ```razor
-...
-<hydro name="Counter"/>
-...
+<page-counter />
 ```
 
-via `Component`:
+by calling a generic tag helper:
+
 ```razor
-...
-@await Component.Hydro("Counter")
-...
+<hydro name="PageCounter"/>
 ```
 
-via ASP.NET Core tag helper:
+or by calling one of the extension methods:
 ```razor
-...
-<vc:counter/>
-...
+@await Html.Hydro("PageCounter")
 ```
-
-or via `Component` with generic type:
 ```razor
-...
-@(await Component.Hydro<Counter>())
-...
+@(await Html.Hydro<PageCounter>())
 ```
 
 ## State

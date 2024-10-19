@@ -25,7 +25,7 @@ internal static class HydroComponentsExtensions
     {
         Converters = new JsonConverter[] { new Int32Converter() }.ToList()
     };
-    
+
     public static void MapHydroComponent(this IEndpointRouteBuilder app, Type componentType)
     {
         var componentName = componentType.Name;
@@ -60,12 +60,8 @@ internal static class HydroComponentsExtensions
                 await ExecuteRequestOperations(httpContext, method);
             }
 
-            var viewContext = CreateViewContext(httpContext, serviceProvider);
-            ((DefaultViewComponentHelper)viewComponentHelper).Contextualize(viewContext);
-            var htmlContent = await viewComponentHelper.InvokeAsync(componentType);
-
+            var htmlContent = await TagHelperRenderer.RenderTagHelper(componentType, httpContext);
             var content = await GetHtml(htmlContent);
-
             return Results.Content(content, MediaTypeNames.Text.Html);
         });
     }
@@ -82,7 +78,7 @@ internal static class HydroComponentsExtensions
         var formValues = hydroData
             .Where(f => !f.Key.StartsWith("__hydro"))
             .ToDictionary(f => f.Key, f => f.Value);
-        
+
         var model = hydroData["__hydro_model"].First();
         var type = hydroData["__hydro_type"].First();
         var parameters = JsonConvert.DeserializeObject<Dictionary<string, object>>(hydroData["__hydro_parameters"].FirstOrDefault("{}"), JsonSerializerSettings);
@@ -105,7 +101,7 @@ internal static class HydroComponentsExtensions
         {
             context.Items.Add(HydroConsts.ContextItems.MethodName, method);
         }
-        
+
         if (form.Any() || form.Files.Any())
         {
             context.Items.Add(HydroConsts.ContextItems.RequestForm, form);
@@ -118,13 +114,5 @@ internal static class HydroComponentsExtensions
         htmlContent.WriteTo(writer, HtmlEncoder.Default);
         await writer.FlushAsync();
         return writer.ToString();
-    }
-
-    private static ViewContext CreateViewContext(HttpContext httpContext, IServiceProvider serviceProvider)
-    {
-        var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
-        var viewData = new ViewDataDictionary(new EmptyModelMetadataProvider(), new ModelStateDictionary());
-        var tempData = new TempDataDictionary(httpContext, serviceProvider.GetRequiredService<ITempDataProvider>());
-        return new ViewContext(actionContext, new DummyView(), viewData, tempData, TextWriter.Null, new HtmlHelperOptions());
     }
 }

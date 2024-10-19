@@ -6,6 +6,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
+using Microsoft.AspNetCore.Razor.TagHelpers;
 
 namespace Hydro;
 
@@ -30,14 +31,14 @@ internal static class PropertyInjector
             return properties;
         }
 
-        var viewComponentType = typeof(ViewComponent);
+        var viewComponentType = typeof(TagHelper);
         var hydroComponentType = typeof(HydroComponent);
 
         var baseProps = new[] { "Key", "KeyBehavior" };
         
         var propertyInfos = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
             .Where(p => (baseProps.Contains(p.Name) && p.DeclaringType == hydroComponentType)
-                        || (p.DeclaringType != viewComponentType
+                        || (p.DeclaringType != viewComponentType && p.DeclaringType != hydroComponentType
                             && p.GetGetMethod()?.IsPublic == true
                             && p.GetSetMethod()?.IsPublic == true
                             && !p.GetCustomAttributes<TransientAttribute>().Any())
