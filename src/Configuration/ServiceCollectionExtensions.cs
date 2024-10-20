@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Hydro.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Hydro.Configuration;
@@ -20,6 +22,7 @@ public static class ServiceCollectionExtensions
         options?.Invoke(hydroOptions);
         services.AddSingleton(hydroOptions);
         services.TryAddSingleton<IPersistentState, PersistentState>();
+
         return services;
     }
 }
