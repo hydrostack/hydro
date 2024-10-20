@@ -36,6 +36,20 @@ Alternatively, you can use the `hydro-bind` attribute:
 <input asp-for="FirstName" hydro-bind />
 ```
 
+The `asp-for` is a built-in ASP.NET Core tag helper that generates the `name`, `id` and `value` attributes for the input element. It's not required and you can provide these attributes manually:
+
+```razor
+<!-- NameForm.cshtml -->
+
+@model NameForm
+
+<div>
+  <input name="FirstName" value="@Model.FirstName" bind />
+  <input name="LastName" value="@Model.LastName" bind />
+  <span>Full name: @Model.FirstName @Model.LastName</span>
+</div>
+```
+
 ## Trigger event
 
 The default event used for binding is `change`. To choose another event, you can specify it:
