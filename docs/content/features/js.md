@@ -27,7 +27,7 @@ Example. Select the content of an input when focused:
 
 <div>
   Count: <strong>@Model.Count</strong>
-  <input asp-for="Phrase" hydro-bind x-on:focus="$el.select()" />
+  <input asp-for="Phrase" bind x-on:focus="$el.select()" />
 </div>
 ```
 
@@ -59,7 +59,7 @@ You can execute JavaScript code using [Hydro action handlers](/features/actions)
 <div>
   <button
     type="button"
-    hydro-on:click="@(() => Model.Client.ExecuteJs("alert('test')"))">
+    on:click="@(() => Model.Client.ExecuteJs("alert('test')"))">
       Click me
   </button>
 </div>

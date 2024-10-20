@@ -68,5 +68,5 @@ Attribute added to elements that triggered a Hydro operation and is currently be
 
 @model MyComponent
 
-<button hydro-on:click="@(() => Model.Submit())">Submit <div class="loader">...</div></button>
+<button on:click="@(() => Model.Submit())">Submit <div class="loader">...</div></button>
 ```

@@ -31,9 +31,9 @@ public class ProductForm : HydroComponent
 
 @model ProductForm
 
-<form hydro-on:submit="@(() => Model.Submit())">
+<form on:submit="@(() => Model.Submit())">
   <label asp-for="Name"></label>
-  <input asp-for="Name" hydro-bind />
+  <input asp-for="Name" bind />
   <span asp-validation-for="Name"></span>  
 
   <button type="submit">Submit</button>
