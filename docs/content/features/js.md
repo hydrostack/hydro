@@ -102,3 +102,18 @@ public class ProductDialog : HydroComponent
 
 In the above example, first we dispatch an event to notify dialogs container to change the state, and then we invoke JS expression
 to remove dialog component DOM element immediately, without waiting for the state update.
+
+## Generic events
+
+Hydro emits JavaScript events on `document` element during certain lifecycle moments of the component:
+- `HydroComponentInit` - triggered once component is initialized
+- `HydroComponentUpdate` - triggered after component content is updated
+- `HydroLocation`- triggered when the url changes via [hydro-link](navigation.html#navigation-via-links) or [Location](navigation.html#navigation-initiated-in-components-without-page-reload) method
+
+To catch these events you can use `document.addEventListener`:
+
+```js
+document.addEventListener('HydroComponentInit', function (e) {
+  console.log('Component initialized', e.detail);
+});
+```
