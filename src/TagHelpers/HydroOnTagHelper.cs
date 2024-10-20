@@ -13,11 +13,14 @@ namespace Hydro.TagHelpers;
 /// Tag helper for event handlers
 /// </summary>
 [HtmlTargetElement("*", Attributes = $"{HandlersPrefix}*")]
+[HtmlTargetElement("*", Attributes = $"{HandlersPrefixShort}*")]
 public sealed class HydroOnTagHelper : TagHelper
 {
     private const string HandlersPrefix = "hydro-on:";
+    private const string HandlersPrefixShort = "on:";
 
     private IDictionary<string, Expression> _handlers;
+    private IDictionary<string, Expression> _handlersShort;
 
     /// <summary />
     [HtmlAttributeName(DictionaryAttributePrefix = HandlersPrefix)]
@@ -25,6 +28,14 @@ public sealed class HydroOnTagHelper : TagHelper
     {
         get => _handlers ??= new Dictionary<string, Expression>(StringComparer.OrdinalIgnoreCase);
         set => _handlers = value;
+    }
+    
+    /// <summary />
+    [HtmlAttributeName(DictionaryAttributePrefix = HandlersPrefixShort)]
+    public IDictionary<string, Expression> HandlersShort
+    {
+        get => _handlersShort ??= new Dictionary<string, Expression>(StringComparer.OrdinalIgnoreCase);
+        set => _handlersShort = value;
     }
 
     /// <summary>
@@ -46,12 +57,14 @@ public sealed class HydroOnTagHelper : TagHelper
 
         var modelType = ViewContext?.ViewData.ModelMetadata.ContainerType ?? ViewContext?.ViewData.Model?.GetType();
 
-        if (modelType == null || _handlers == null)
+        var handlers = _handlersShort ?? _handlers;
+        
+        if (modelType == null || handlers == null)
         {
             return;
         }
 
-        foreach (var eventItem in _handlers.Where(h => h.Value != null))
+        foreach (var eventItem in handlers.Where(h => h.Value != null))
         {
             if (eventItem.Value is not LambdaExpression actionExpression)
             {

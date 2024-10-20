@@ -172,7 +172,7 @@ public class CustomerList(IDatabase database) : HydroComponent
 
 @model CustomerList
 
-<input asp-for="SearchPhrase" hydro-bind:input.debounce placeholder="Search..." />
+<input asp-for="SearchPhrase" bind:input.debounce placeholder="Search..." />
 
 <table class="table table-sm">
   <thead>

@@ -91,7 +91,7 @@ In this case using a Hydro action might be an overkill, since it will cause an u
 
 ```razor
 <button 
-    hydro-on:click="@(() => Model.Client.Dispatch(new OpenAddModal())">
+    on:click="@(() => Model.Client.Dispatch(new OpenAddModal())">
   Add
 </button>
 ```

@@ -43,7 +43,7 @@ features:
 @model NameForm
 
 <div>
-  <input asp-for="Name" hydro-bind:keydown />
+  <input asp-for="Name" bind:keydown />
   <div>Hello @Model.Name</div>
 </div>
 ```
@@ -64,8 +64,8 @@ public class NameForm : HydroComponent
 
 @model NameForm
 
-<form hydro-on:submit="@(() => Model.Save())">
-  <input asp-for="Name" hydro-bind />
+<form on:submit="@(() => Model.Save())">
+  <input asp-for="Name" bind />
   <span asp-validation-for="Name"></span>
   
   <button type="submit">Save</button>
@@ -110,7 +110,7 @@ public class NameForm : HydroComponent
 <div>
   Count: @Model.Count
   
-  <button hydro-on:click="@(() => Model.Add(10))">
+  <button on:click="@(() => Model.Add(10))">
     Add
   </button>
 </div>

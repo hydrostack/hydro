@@ -4,7 +4,7 @@ outline: deep
 
 # Binding
 
-You can bind your component's properties to any input/select/textarea element by using `hydro-bind`. It will synchronize the client value with server value on the chosen event (`change` as default).
+You can bind your component's properties to any input/select/textarea element by using `bind` or `hydro-bind`. It will synchronize the client value with server value on the chosen event (`change` as default).
 
 Example:
 
@@ -24,10 +24,16 @@ public class NameForm : HydroComponent
 @model NameForm
 
 <div>
-  <input asp-for="FirstName" hydro-bind />
-  <input asp-for="LastName" hydro-bind />
+  <input asp-for="FirstName" bind />
+  <input asp-for="LastName" bind />
   <span>Full name: @Model.FirstName @Model.LastName</span>
 </div>
+```
+
+Alternatively, you can use the `hydro-bind` attribute:
+
+```razor
+<input asp-for="FirstName" hydro-bind />
 ```
 
 ## Trigger event
@@ -35,14 +41,14 @@ public class NameForm : HydroComponent
 The default event used for binding is `change`. To choose another event, you can specify it:
 
 ```razor
-<input asp-for="Search" hydro-bind:input />
+<input asp-for="Search" bind:input />
 ```
 
 ## Debouncing
 
 To debounce the bind event use the `.debounce` attribute expression:
 ```razor
-<input asp-for="Search" hydro-bind:keydown.debounce.500ms />
+<input asp-for="Search" bind:keydown.debounce.500ms />
 ```
 
 ## Handling `bind` event in a component
@@ -75,7 +81,7 @@ You can use `file` inputs to enable file upload. Example:
   <input
     asp-for="DocumentFile"
     type="file"
-    hydro-bind />
+    bind />
 </div>
 ```
 
@@ -156,7 +162,7 @@ To support multiple files in one field, you can use the `multiple` attribute:
     asp-for="DocumentFile"
     type="file"
     multiple
-    hydro-bind />
+    bind />
 </div>
 ```
 

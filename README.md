@@ -76,7 +76,7 @@ To create Hydro component, go to your components folder, for example in case of 
 
 <div>
   Count: <strong>@Model.Count</strong>
-  <button hydro-on:click="@(() => Model.Add())">
+  <button on:click="@(() => Model.Add())">
     Add
   </button>
 </div>
@@ -122,10 +122,6 @@ or by calling an extension method:
 ```
 
 And voilà! You can test your component by clicking on the `Add` button.
-
-## Apps using Hydro
-- [Moneybow](https://www.moneybow.app/)
-- ...
 
 ## External libraries
 

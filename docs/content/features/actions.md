@@ -22,7 +22,7 @@ public class Counter : HydroComponent
 }
 ```
 
-A browser event of an element can be attached to an action method by using the `hydro-on` tag helper:
+A browser event of an element can be attached to an action method by using the `on` tag helper:
 
 ```razor
 <!-- Counter.cshtml -->
@@ -30,15 +30,35 @@ A browser event of an element can be attached to an action method by using the `
 @model Counter
 <div>
   Count: <strong>@Model.Count</strong>
-  <button hydro-on:click="@(() => Model.Add())">
+  <button on:click="@(() => Model.Add())">
     Add
   </button>
 </div>
 ```
 
-The attribute `hydro-on` can be defined as:
+```razor
+<!-- Counter.cshtml -->
 
-> hydro-on:**event**="**expression**"
+@model Counter
+<div>
+  Count: <strong>@Model.Count</strong>
+  <button on:click="@(() => Model.Add())">
+    Add
+  </button>
+</div>
+```
+
+Alternatively, you can use the `hydro-on` tag helper:
+
+```razor
+<button on:click="@(() => Model.Add())">
+  Add
+</button>
+```
+
+The attribute `on` can be defined as:
+
+> on:**event**="**expression**"
 
 where:
 - **event**: a definition of the event handler that is compatible with Alpine.js's [x-on directive](https://alpinejs.dev/directives/on)
@@ -47,11 +67,11 @@ where:
 Examples:
 
 ```razor
-<button hydro-on:click="@(() => Model.Add(20))">
+<button on:click="@(() => Model.Add(20))">
 
-<div hydro-on:click.outside="@(() => Model.Close())">
+<div on:click.outside="@(() => Model.Close())">
 
-<input type="text" hydro-on:keyup.shift.enter="@(() => Model.Save())" />
+<input type="text" on:keyup.shift.enter="@(() => Model.Save())" />
 ```
 
 ## Parameters
@@ -80,7 +100,7 @@ public class Counter : HydroComponent
 @model Counter
 <div>
   Count: <strong>@Model.Count</strong>
-  <button hydro-on:click="@(() => Model.Set(20))">
+  <button on:click="@(() => Model.Set(20))">
     Set to 20
   </button>
 </div>
@@ -117,7 +137,7 @@ public class Content : HydroComponent
 @model Content
 <div>
   <input type="text" id="myInput" />
-  <button hydro-on:click="@(() => Model.Update(Param.JS("window.myInput.value")))">
+  <button on:click="@(() => Model.Update(Param.JS("window.myInput.value")))">
     Update content
   </button>
 </div>
