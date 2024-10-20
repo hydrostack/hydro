@@ -17,7 +17,15 @@ public class Counter : HydroComponent
 }
 ```
 
-The `Count` property can be set by a parameter, when this component is triggered from outside:
+The `Count` property can be set by a parameter using dash-case notation:
+
+```razor
+<!-- Index.cshtml -->
+
+<counter count="10" />
+```
+
+or
 
 ```razor
 <!-- Index.cshtml -->
@@ -25,20 +33,12 @@ The `Count` property can be set by a parameter, when this component is triggered
 <hydro name="Counter" params="@(new { Count = 10 })"/>
 ```
 
-Or when using `vc:*` tag helpers:
-
-```razor
-<!-- Index.cshtml -->
-
-<vc:counter parameters="@(new { Count = 10 })"/>
-```
-
 or
 
 ```razor
 <!-- Index.cshtml -->
     
-@await Component.Hydro("Counter", new { Count = 10 })
+@await Html.Hydro("Counter", new { Count = 10 })
 ```
 
 ## Transient properties
@@ -79,13 +79,11 @@ The values are passed to the component only once and any update to the parameter
 When rendering a Hydro component, you can provide an optional `key` argument:
 
 ```razor
-<hydro name="MyComponent" key="1"/>
+<my-component key="1" />
 ```
-
 or
-
 ```razor
-@(await Component.Hydro<MyComponent>(key: "1"))
+<hydro name="MyComponent" key="1" />
 ```
 
 It's used when you have multiple components of the same type on the page to make it possible to distinguish them during DOM updates.
@@ -95,23 +93,24 @@ Usage examples:
 ```razor
 @foreach (var item in Items)
 {
-  <hydro name="Product" key="@item.Id"/>
+  <product key="@item.Id"/>
 }
 ```
 
 or
 
 ```razor
-<hydro name="Product" key="1"/>
-<hydro name="Product" key="2"/>
+<product key="1"/>
+<product key="2"/>
 ```
 
 You can also use `key` to force re-render of your component:
 
 ```razor
-<hydro name="Items" params="@(new { Model.Items })" key="@Model.Items.GetHashCode()" />
+<items data="@Model.Items" key="@Model.Items.CalculateHashCode()" />
 ```
 
+Where `CalculateHashCode` is an extension method returning unique hash code for the collection. 
 Now, whenever `Model.Items` changes, Hydro will re-render the component `Items` and pass new parameter.
 
 ### Key attribute behavior in the UI
@@ -122,7 +121,7 @@ there might be a case where you want to morph the component HTML instead, for ex
 is the one where might be the focus. To do that, use `key-behavior` attribute:
 
 ```razor
-<hydro name="Currency" key="PL" key-behavior="Morph" />
+<currency key="PL" key-behavior="Morph" />
 ```
 
 ## Caching

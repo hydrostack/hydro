@@ -1,9 +1,7 @@
-﻿using JetBrains.Annotations;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Hydro.TagHelpers;
 
@@ -17,7 +15,7 @@ public sealed class HydroComponentTagHelper : TagHelper
     private const string ParametersAttribute = "params";
     private const string ParametersPrefix = "param-";
 
-    private IDictionary<string, object> _parameters;
+    private Dictionary<string, object> _parameters;
 
     /// <summary>
     /// View context
@@ -30,7 +28,6 @@ public sealed class HydroComponentTagHelper : TagHelper
     /// Hydro component's action to execute
     /// </summary>
     [HtmlAttributeName(NameAttribute)]
-    [AspMvcViewComponent]
     public string Name { get; set; }
 
     /// <summary>
@@ -43,7 +40,7 @@ public sealed class HydroComponentTagHelper : TagHelper
     /// Parameters passed to the component
     /// </summary>
     [HtmlAttributeName(DictionaryAttributePrefix = ParametersPrefix)]
-    public IDictionary<string, object> ParametersDictionary
+    public Dictionary<string, object> ParametersDictionary
     {
         get => _parameters ??= new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         set => _parameters = value;
@@ -82,17 +79,19 @@ public sealed class HydroComponentTagHelper : TagHelper
         ArgumentNullException.ThrowIfNull(output);
 
         output.TagName = null;
-
-        var viewComponentHelper = ViewContext.HttpContext.RequestServices.GetService<IViewComponentHelper>();
-        ((IViewContextAware)viewComponentHelper).Contextualize(ViewContext);
-
-        var componentHtml = await viewComponentHelper.InvokeAsync(Name, new
-        {
-            parameters = Parameters ?? _parameters,
-            key = Key,
-            keyBehavior = KeyBehavior
-        });
-
+        var componentHtml = await GetTagHelperHtml();
         output.Content.SetHtmlContent(componentHtml);
+    }
+
+    private async Task<IHtmlContent> GetTagHelperHtml()
+    {
+        var tagHelper = TagHelperRenderer.FindTagHelperType(Name, ViewContext.HttpContext);
+
+        var parameters = (Parameters != null ? PropertyExtractor.GetPropertiesFromObject(Parameters) : _parameters ?? new())
+            .Append(new(nameof(Key), Key))
+            .Append(new(nameof(KeyBehavior), KeyBehavior))
+            .ToDictionary(p => p.Key, p => p.Value);
+
+        return await TagHelperRenderer.RenderTagHelper(tagHelper, ViewContext, parameters);
     }
 }

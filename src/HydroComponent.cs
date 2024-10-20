@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
@@ -7,10 +7,15 @@ using System.Text;
 using HtmlAgilityPack;
 using Hydro.Configuration;
 using Hydro.Utils;
-using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.AspNetCore.Razor.TagHelpers;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,10 +27,11 @@ namespace Hydro;
 /// <summary>
 /// Stateful and reactive view component
 /// </summary>
-public abstract class HydroComponent : ViewComponent
+public abstract class HydroComponent : TagHelper, IViewContextAware
 {
     private string _componentId;
     private bool _skipOutput;
+    private dynamic _viewBag;
 
     private readonly ConcurrentDictionary<CacheKey, object> _requestCache = new();
     private static readonly ConcurrentDictionary<CacheKey, object> PersistentCache = new();
@@ -48,6 +54,8 @@ public abstract class HydroComponent : ViewComponent
     private static readonly ConcurrentDictionary<Type, IHydroAuthorizationFilter[]> ComponentAuthorizationAttributes = new();
     private HydroOptions _options;
     private ILogger<HydroComponent> _logger;
+    private StringWriter _writer;
+    private bool _writerDisposed;
 
     /// <summary>
     /// Provides indication if ModelState is valid
@@ -58,13 +66,13 @@ public abstract class HydroComponent : ViewComponent
     /// Provides component's key value
     /// </summary>
     [JsonProperty]
-    protected string Key { get; private set; }
-    
+    public string Key { get; set; }
+
     /// <summary>
     /// Component's HTML behavior when the key changes
     /// </summary>
     [JsonProperty]
-    protected KeyBehavior KeyBehavior { get; private set; }
+    public KeyBehavior KeyBehavior { get; set; }
 
     /// <summary>
     /// Default identifier used to specify place of the page to replace when during location change
@@ -74,22 +82,26 @@ public abstract class HydroComponent : ViewComponent
     /// <summary>
     /// Provides list of already accessed component's properties  
     /// </summary>
+    [HtmlAttributeNotBound]
     public HashSet<string> TouchedProperties { get; set; } = new();
 
     /// <summary>
     /// Determines if the whole model was accessed already
     /// </summary>
+    [HtmlAttributeNotBound]
     public bool IsModelTouched { get; set; }
 
     /// <summary>
     /// Determines if the current execution is related to the component mounting
     /// </summary>
     [Transient]
+    [HtmlAttributeNotBound]
     public bool IsMount { get; set; }
 
     /// <summary>
     /// Unique component identifier
     /// </summary>
+    [HtmlAttributeNotBound]
     public string ComponentId => _componentId;
 
     /// <summary />
@@ -140,27 +152,105 @@ public abstract class HydroComponent : ViewComponent
     }
 
     /// <summary>
+    /// View context
+    /// </summary>
+    [HtmlAttributeNotBound]
+    [ViewContext]
+    public ViewContext ViewContext { get; set; }
+
+    /// <summary>
+    /// View data
+    /// </summary>
+    [HtmlAttributeNotBound]
+    public ViewDataDictionary ViewData => ViewContext.ViewData;
+    
+    /// <summary>
+    /// View bag
+    /// </summary>
+    [HtmlAttributeNotBound]
+    public dynamic ViewBag
+    {
+        get
+        {
+            if (_viewBag == null)
+            {
+                _viewBag = new ViewBag(() => ViewContext.ViewData);
+            }
+
+            return _viewBag;
+        }
+    }
+
+    /// <summary>
+    /// Model state
+    /// </summary>
+    [HtmlAttributeNotBound]
+    public ModelStateDictionary ModelState => ViewContext.ModelState;
+
+    /// <summary>
+    /// HttpContext
+    /// </summary>
+    [HtmlAttributeNotBound]
+    public HttpContext HttpContext => ViewContext.HttpContext;
+    
+    /// <summary>
+    /// Request
+    /// </summary>
+    [HtmlAttributeNotBound]
+    public HttpRequest Request => ViewContext.HttpContext.Request;
+    
+    /// <summary>
+    /// Request
+    /// </summary>
+    [HtmlAttributeNotBound]
+    public HttpResponse Response => ViewContext.HttpContext.Response;
+    
+    /// <summary>
+    /// RouteData
+    /// </summary>
+    [HtmlAttributeNotBound]
+    public RouteData RouteData => ViewContext.RouteData;
+
+    /// <summary>
+    /// Url helper
+    /// </summary>
+    [HtmlAttributeNotBound]
+    public IUrlHelper Url { get; set; }
+
+    /// <summary>
+    /// Properties
+    /// </summary>
+    public object Params { get; set; }
+
+    /// <summary>
     /// Implementation of ViewComponent's InvokeAsync method
     /// </summary>
-    /// <param name="parameters">An object with component parameters</param>
-    /// <param name="key">Local identifier to distinguish components of same type</param>
-    /// <param name="keyBehavior">Component's HTML behavior when the key changes</param>
-    public async Task<IHtmlContent> InvokeAsync(object parameters = null, string key = null, KeyBehavior keyBehavior = KeyBehavior.Replace)
+    public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
     {
-        ApplyParameters(parameters);
+        var services = HttpContext.RequestServices;
+
+        SetupViewContext();
+
+        if (Params != null)
+        {
+            ApplyParameters(Params);
+        }
 
         ViewContext.ViewData.TemplateInfo.HtmlFieldPrefix = null;
-        Key = key;
-        KeyBehavior = keyBehavior;
 
-        var persistentState = HttpContext.RequestServices.GetService<IPersistentState>();
-        _options = HttpContext.RequestServices.GetService<HydroOptions>();
-        _logger = HttpContext.RequestServices.GetService<ILogger<HydroComponent>>() ?? NullLogger<HydroComponent>.Instance;
+        var urlHelperFactory = services.GetService<IUrlHelperFactory>();
+        Url = urlHelperFactory.GetUrlHelper(ViewContext);
+
+        var persistentState = services.GetService<IPersistentState>();
+        _options = services.GetService<HydroOptions>();
+        _logger = services.GetService<ILogger<HydroComponent>>() ?? NullLogger<HydroComponent>.Instance;
 
         if (persistentState == null || _options == null)
         {
             throw new ApplicationException("Hydro has not been initialized with UseHydro in the application startup.");
         }
+
+        output.TagName = null;
 
         try
         {
@@ -168,13 +258,40 @@ public abstract class HydroComponent : ViewComponent
                 ? await RenderOnlineComponent(persistentState)
                 : await RenderStaticComponent(persistentState);
 
-            return new HtmlString(componentHtml);
+            output.Content.SetHtmlContent(componentHtml);
+
+            if (!_writerDisposed)
+            {
+                await _writer.DisposeAsync();
+            }
         }
         catch (Exception e)
         {
             HandleError(e);
-            return new HtmlString(string.Empty);
+            output.Content.SetHtmlContent(string.Empty);
         }
+    }
+
+    private void SetupViewContext()
+    {
+        var services = HttpContext.RequestServices;
+        var modelMetadataProvider = services.GetService<IModelMetadataProvider>();
+        var compositeViewEngine = services.GetService<ICompositeViewEngine>();
+
+        var viewDataDictionary = new ViewDataDictionary(modelMetadataProvider, ViewContext.ModelState)
+        {
+            Model = this,
+        };
+
+        var view = compositeViewEngine.GetView(null, GetViewPath(), false).View;
+        
+        if (view == null)
+        {
+            throw new InvalidOperationException($"The view '{GetViewPath()}' was not found.");
+        }
+        
+        _writer = new StringWriter();
+        ViewContext = new ViewContext(ViewContext, view, viewDataDictionary, _writer);
     }
 
     /// <summary>
@@ -455,7 +572,7 @@ public abstract class HydroComponent : ViewComponent
     private static string GetComponentPlaceholderTemplate(string componentId, string key, KeyBehavior keyBehavior)
     {
         var useKey = !string.IsNullOrWhiteSpace(key) && keyBehavior == KeyBehavior.Replace;
-        
+
         return $"<div id=\"{componentId}\" {(useKey ? $"key=\"{key}\"" : "")} hydro hydro-placeholder></div>";
     }
 
@@ -606,7 +723,7 @@ public abstract class HydroComponent : ViewComponent
                 {
                     var formFile = fileGroup.First();
                     setter.Value.Setter(formFile);
-                    await BindAsync(propertyPath, formFile);                    
+                    await BindAsync(propertyPath, formFile);
                 }
             }
             else
@@ -903,7 +1020,7 @@ public abstract class HydroComponent : ViewComponent
     /// <summary>
     /// Get the view path based on the type
     /// </summary>
-    protected string GetViewPath(Type type)
+    protected static string GetViewPath(Type type)
     {
         var assemblyName = type.Assembly.GetName().Name;
         return $"{type.FullName!.Replace(assemblyName!, "~").Replace(".", "/")}.cshtml";
@@ -923,23 +1040,21 @@ public abstract class HydroComponent : ViewComponent
 
     private async Task<HtmlDocument> GetComponentHtml()
     {
-        using var stream = new MemoryStream();
-        await using var writer = new StreamWriter(stream);
-
-        var previousWriter = ViewComponentContext.ViewContext.Writer;
-        ViewComponentContext.ViewContext.Writer = writer;
-        ViewComponentContext.ViewContext.CheckBoxHiddenInputRenderMode = CheckBoxHiddenInputRenderMode.None;
-
-        var result = View(GetViewPath(), this);
-
-        await result.ExecuteAsync(ViewComponentContext);
-        await writer.FlushAsync();
-
-        stream.Position = 0;
+        var viewHtml = await GetViewHtml();
         var htmlDocument = new HtmlDocument();
-        htmlDocument.Load(stream);
-        ViewComponentContext.ViewContext.Writer = previousWriter;
+        htmlDocument.LoadHtml(viewHtml);
         return htmlDocument;
+    }
+
+    private async Task<string> GetViewHtml()
+    {
+        await using (_writer)
+        {
+            _writerDisposed = true;
+            await ViewContext.View.RenderAsync(ViewContext);
+            await _writer.FlushAsync();
+            return _writer.ToString();
+        }
     }
 
     private void ApplyParameters(object parameters)
@@ -1042,7 +1157,7 @@ public abstract class HydroComponent : ViewComponent
 
     private bool ValidateTouched()
     {
-        ModelState.Clear();
+        ViewContext.ModelState.Clear();
 
         var context = new ValidationContext(this, serviceProvider: HttpContext.RequestServices, items: null);
         var validationResults = new List<ValidationResult>();
@@ -1055,12 +1170,12 @@ public abstract class HydroComponent : ViewComponent
             {
                 if (IsModelTouched || TouchedProperties.Contains(memberName) || TouchedProperties.Any(p => p.StartsWith($"{memberName}.")))
                 {
-                    ModelState.AddModelError(memberName, validationResult.ErrorMessage!);
+                    ViewContext.ModelState.AddModelError(memberName, validationResult.ErrorMessage!);
                 }
             }
         }
 
-        IsValid = ModelState.IsValid;
+        IsValid = ViewContext.ModelState.IsValid;
 
         return IsValid;
     }
@@ -1114,4 +1229,10 @@ public abstract class HydroComponent : ViewComponent
 
     private static string Hash(string input) =>
         $"W{Convert.ToHexString(MD5.HashData(Encoding.ASCII.GetBytes(input)))}";
+
+    /// <inheritdoc />
+    public void Contextualize(ViewContext viewContext)
+    {
+        ViewContext = viewContext;
+    }
 }

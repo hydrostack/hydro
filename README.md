@@ -99,24 +99,25 @@ public class Counter : HydroComponent
 
 To use your new component, you can render it in your Razor Page (e.g. `Index.cshtml`) in two ways:
 
-via Hydro tag helper:
+by calling a custom tag:
+```razor
+...
+<counter />
+...
+```
+
+by calling a generic tag helper:
+
 ```razor
 ...
 <hydro name="Counter"/>
 ...
 ```
 
-via ASP.NET Core tag helper:
+or by calling an extension method:
 ```razor
 ...
-<vc:counter/>
-...
-```
-
-or via extension method:
-```razor
-...
-@await Component.Hydro("Counter")
+@await Html.Hydro("Counter")
 ...
 ```
 
