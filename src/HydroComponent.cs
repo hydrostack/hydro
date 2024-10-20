@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using HtmlAgilityPack;
 using Hydro.Configuration;
+using Hydro.Services;
 using Hydro.Utils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -32,7 +33,9 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     private string _componentId;
     private bool _skipOutput;
     private dynamic _viewBag;
-
+    private CookieStorage _cookieStorage;
+    private IPersistentState _persistentState;
+    
     private readonly ConcurrentDictionary<CacheKey, object> _requestCache = new();
     private static readonly ConcurrentDictionary<CacheKey, object> PersistentCache = new();
 
@@ -223,6 +226,18 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     public object Params { get; set; }
 
     /// <summary>
+    /// Provides actions that can be executed on client side
+    /// </summary>
+    public HydroClientActions Client { get; private set; }
+
+    /// <summary>
+    /// Cookie storage
+    /// </summary>
+    [HtmlAttributeNotBound]
+    public CookieStorage CookieStorage =>
+        _cookieStorage ??= new CookieStorage(HttpContext, _persistentState);
+    
+    /// <summary>
     /// Implementation of ViewComponent's InvokeAsync method
     /// </summary>
     public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
@@ -241,11 +256,11 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         var urlHelperFactory = services.GetService<IUrlHelperFactory>();
         Url = urlHelperFactory.GetUrlHelper(ViewContext);
 
-        var persistentState = services.GetService<IPersistentState>();
+        _persistentState = services.GetService<IPersistentState>();
         _options = services.GetService<HydroOptions>();
         _logger = services.GetService<ILogger<HydroComponent>>() ?? NullLogger<HydroComponent>.Instance;
 
-        if (persistentState == null || _options == null)
+        if (_persistentState == null || _options == null)
         {
             throw new ApplicationException("Hydro has not been initialized with UseHydro in the application startup.");
         }
@@ -255,8 +270,8 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         try
         {
             var componentHtml = HttpContext.IsHydro(excludeBoosted: true)
-                ? await RenderOnlineComponent(persistentState)
-                : await RenderStaticComponent(persistentState);
+                ? await RenderOnlineComponent(_persistentState)
+                : await RenderStaticComponent(_persistentState);
 
             output.Content.SetHtmlContent(componentHtml);
 
@@ -417,11 +432,6 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     /// <typeparam name="TEvent">Event type</typeparam>
     public void DispatchGlobal<TEvent>(TEvent data, string subject = null, bool asynchronous = false) =>
         Dispatch(GetFullTypeName(typeof(TEvent)), data, Scope.Global, asynchronous, subject);
-
-    /// <summary>
-    /// Provides actions that can be executed on client side
-    /// </summary>
-    public HydroClientActions Client { get; private set; }
 
     /// <summary>
     /// Triggered once the component is mounted

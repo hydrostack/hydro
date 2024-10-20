@@ -23,10 +23,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(hydroOptions);
         services.TryAddSingleton<IPersistentState, PersistentState>();
 
-        services.AddScoped<ICookieManager, CookieManager>();
-        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-        services.AddDataProtection();
-
         return services;
     }
 }
