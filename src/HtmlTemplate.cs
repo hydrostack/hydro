@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Html;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Hydro;
 
@@ -19,4 +20,11 @@ public static class HtmlTemplateExtensions
     /// <returns>Html content</returns>
     public static IHtmlContent Render(this HtmlTemplate htmlTemplate) =>
         htmlTemplate(null);
+
+    /// <summary>
+    /// Prepares template to be rendered
+    /// </summary>
+    /// <param name="htmlHelper">Html helper</param>
+    /// <param name="content">Html template followed by @ sign</param>
+    public static IHtmlContent Template(this IHtmlHelper htmlHelper, Func<object, IHtmlContent> content) => content(null);
 }
