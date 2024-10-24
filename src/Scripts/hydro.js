@@ -206,7 +206,7 @@
     }
   }
 
-  async function hydroBind(el, debounce) {
+  async function hydroBind(el) {
     if (!isElementDirty(el)) {
       return;
     }
@@ -260,7 +260,6 @@
       clearTimeout(binding[component.id].timeout);
     }
 
-
     binding[component.id].promise = new Promise(resolve => {
       binding[component.id].timeout = setTimeout(async () => {
         const requestFormData = binding[component.id].formData;
@@ -272,7 +271,7 @@
           delete dirty[propertyName];
         }
         resolve();
-      }, Math.max(debounce, 10));
+      }, 10);
     });
 
     return binding[component.id].promise;
@@ -308,7 +307,7 @@
     const component = el.closest("[hydro]");
     const componentId = component.getAttribute("id");
     const componentName = component.getAttribute("hydro-name");
-    
+
     if (!component) {
       throw new Error('Cannot determine the closest Hydro component');
     }
@@ -696,13 +695,18 @@ document.addEventListener('alpine:init', () => {
 
       const debounce = parseInt(((modifiers[0] === 'debounce' && (modifiers[1] || '250ms')) || '0ms').replace('ms', ''));
 
+      let timeout;
+
       const eventHandler = async (event) => {
         if (event === 'submit' || event === 'click') {
           event.preventDefault();
         }
 
         const target = event.currentTarget;
-        await window.Hydro.hydroBind(target, debounce);
+        clearTimeout(timeout);
+        timeout = setTimeout(async () => {
+          await window.Hydro.hydroBind(target);
+        }, debounce || 0);
       };
 
       el.addEventListener(event, eventHandler);

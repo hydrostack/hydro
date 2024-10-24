@@ -10,7 +10,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/hydrostack/hydro.git</RepositoryUrl>
     <RepositoryType>GIT</RepositoryType>
-    <PackageTags>ASP.NET Core Wired Components</PackageTags>
+    <PackageTags>ASP.NET Core Hydro Components</PackageTags>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
