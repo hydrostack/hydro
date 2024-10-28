@@ -16,6 +16,9 @@ hero:
     - theme: brand
       text: Why Hydro
       link: /introduction/motivation
+    - theme: brand
+      text: Toolkit
+      link: https://toolkit.usehydro.dev/
 
 features:
   - icon: ♥️
