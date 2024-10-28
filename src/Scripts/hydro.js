@@ -703,10 +703,13 @@ document.addEventListener('alpine:init', () => {
         }
 
         const target = event.currentTarget;
-        clearTimeout(timeout);
-        timeout = setTimeout(async () => {
+
+        if (debounce) {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => window.Hydro.hydroBind(target), debounce || 0);
+        } else {
           await window.Hydro.hydroBind(target);
-        }, debounce || 0);
+        }
       };
 
       el.addEventListener(event, eventHandler);
