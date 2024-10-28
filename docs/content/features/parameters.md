@@ -41,6 +41,8 @@ or
 @await Html.Hydro("Counter", new { Count = 10 })
 ```
 
+> NOTE: For multi-word properties, `Data` word cannot be used as the leading one, for example `DataSource`. `Database` is fine, since here `Data` is not a word, but just a part of the word.
+
 ## Transient properties
 
 Sometimes there is no need to persist the property value across the request because its value is valid only within
