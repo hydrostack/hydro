@@ -8,7 +8,9 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: 'Introduction', link: '/introduction/getting-started' },
-      { text: 'Guide', link: '/features/components' }
+      { text: 'Guide', link: '/features/components' },
+      { text: 'Toolkit', link: 'https://toolkit.usehydro.dev' },
+      { text: 'Sponsor', link: 'https://github.com/sponsors/kjeske' }
     ],
     sidebar: [
       {

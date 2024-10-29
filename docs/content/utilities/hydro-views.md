@@ -11,7 +11,6 @@ Here is a basic example of a Hydro view called `Submit`:
 ```c#
 // Submit.cshtml.cs
 
-[HtmlTargetElement("submit")]
 public class Submit : HydroView;
 ```
 
@@ -35,12 +34,11 @@ Now we can use our Hydro view in any other razor view:
 
 ## Naming conventions
 
-There are 3 ways of naming Hydro views:
+There are 2 ways of naming Hydro views:
 
-1. Manual naming with kebab-case:
+1. Automatic naming with dash-case notation:
 
     ```c#
-    [HtmlTargetElement("submit-button")]
     public class SubmitButton : HydroView;
     ```
 
@@ -55,14 +53,6 @@ There are 3 ways of naming Hydro views:
   
     Usage: `<SubmitButton />`
 
-3. Automatic naming using tag helpers naming convention (no `HtmlTargetElement` attribute):
-
-    ```c#
-    public class SubmitButtonTagHelper : HydroView;
-    ```
-
-    Usage: `<submit-button />`
-
 ## Parameters
 
 Hydro views use parameters to pass the data from a caller to the view. Example:
@@ -70,7 +60,6 @@ Hydro views use parameters to pass the data from a caller to the view. Example:
 ```c#
 // Alert.cshtml.cs
 
-[HtmlTargetElement("alert")]
 public class Alert : HydroView
 {
     public string Message { get; set; }    
@@ -107,7 +96,6 @@ We can use this feature to pass optional html attributes to the view, for exampl
 ```c#
 // Alert.cshtml.cs
 
-[HtmlTargetElement("alert")]
 public class Alert : HydroView
 {
     public string Message { get; set; }    
@@ -139,7 +127,6 @@ Hydro views support passing the child html content, so it can be used later when
 ```c#
 // DisplayField.cshtml.cs
 
-[HtmlTargetElement("display-field")]
 public class DisplayField : HydroView
 {
     public string Title { get; set; };
@@ -183,7 +170,6 @@ Slots are placeholders for html content inside Hydro views that can be passed by
 ```c#
 // Card.cshtml.cs
 
-[HtmlTargetElement("card")]
 public class Card : HydroView;
 ```
 
