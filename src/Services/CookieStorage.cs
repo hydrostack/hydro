@@ -23,7 +23,7 @@ public class CookieStorage
             if (storage != null)
             {
                 var json = encryption
-                    ? _persistentState.Unprotect(storage)
+                    ? _persistentState.Decompress(storage)
                     : storage;
 
                 return JsonConvert.DeserializeObject<T>(json);
@@ -80,7 +80,7 @@ public class CookieStorage
         {
             var serializedValue = JsonConvert.SerializeObject(value, JsonSettings);
             var finalValue = encryption
-                ? _persistentState.Protect(serializedValue) 
+                ? _persistentState.Compress(serializedValue) 
                 : serializedValue;
             
             response.Cookies.Append(key, finalValue, options);

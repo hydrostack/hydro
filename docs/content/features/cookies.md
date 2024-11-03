@@ -72,7 +72,7 @@ CookieStorage.Set("theme", "light", encrypt: false, new CookieOptions { Secure =
 
 ## Encryption
 
-It's possible to encrypt the cookie value by setting the `encryption` parameter to `true`:
+It's possible to encode the cookie value by setting the `encryption` parameter to `true`:
 
 ```c#
 CookieStorage.Set("theme", "light", encryption: true);
