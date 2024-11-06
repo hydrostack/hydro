@@ -72,7 +72,7 @@ or by calling one of the extension methods:
 
 ## State
 
-State of the components is serialized, encrypted and stored on the rendered page. Whenever there is call from that component to the back-end, the state is attached to the request headers.
+State of the components is serialized, encoded and stored on the rendered page. Whenever there is call from that component to the back-end, the state is attached to the request headers.
 
 ## Components nesting
 

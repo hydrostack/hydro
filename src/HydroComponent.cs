@@ -781,7 +781,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         scriptNode.SetAttributeValue("type", "text/hydro");
         scriptNode.SetAttributeValue("data-id", id);
         var serializeDeclaredProperties = PropertyInjector.SerializeDeclaredProperties(GetType(), this);
-        var model = persistentState.Protect(serializeDeclaredProperties);
+        var model = persistentState.Compress(serializeDeclaredProperties);
         scriptNode.AppendChild(document.CreateTextNode(model));
         return scriptNode;
     }
@@ -1008,7 +1008,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     {
         if (HttpContext.Items.TryGetValue(HydroConsts.ContextItems.BaseModel, out var baseModel))
         {
-            var unprotect = persistentState.Unprotect((string)baseModel);
+            var unprotect = persistentState.Decompress((string)baseModel);
             JsonConvert.PopulateObject(unprotect, this);
         }
     }
