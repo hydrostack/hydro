@@ -88,6 +88,83 @@ Parameter names are converted to kebab-case when used as attributes on tags, so:
 - `Message` property becomes `message` attribute.
 - `StatusCode` property becomes `status-code` attribute.
 
+## Passing handlers as parameters
+
+When you need to pass a handler to a Hydro view, you can use the `Expression` type:
+
+```c#
+// FormButton.cshtml.cs
+
+public class FormButton : HydroView
+{
+    public Expression Click { get; set; }
+}
+```
+
+```razor
+<!-- FormButton.cshtml -->
+
+@model FormButton
+
+<button on:click="@Model.Click">
+  @Model.Slot()
+</button>
+```
+
+Usage:
+
+```razor
+<form-button click="@(() => Model.Save())">
+  Save
+</form-button>
+```
+
+## Calling actions of specific Hydro components
+
+You can call an action of a specific Hydro component from a Hydro view using the `Reference<T>`. Example:
+
+Parent (Hydro component):
+
+```c#
+public class Parent : HydroComponent
+{
+    public string Value { get; set; }
+    
+    public void LoadText(string value)
+    {
+        Value = value;
+    }
+}
+```
+
+```razor
+<!-- Parent.cshtml -->
+
+@model Parent
+
+<child-view />
+```
+
+Child (Hydro view):
+
+```c#
+public class ChildView : HydroView;
+```
+
+```razor
+<!-- ChildView.cshtml -->
+
+@model ChildView
+
+@{
+  var parent = Model.Reference<Parent>();
+}
+
+<button on:click="@(() => parent.LoadText("Hello!"))">
+  Set text
+</button>
+```
+
 ## Dynamic attributes
 
 All attributes passed to the Hydro view by the caller are available in a view definition, even when they are not defined as properties.

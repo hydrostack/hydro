@@ -5,13 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Mvc.ViewComponents;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Hydro.Configuration;
 using Hydro.Utils;
 using Microsoft.Extensions.Logging;
@@ -61,6 +55,12 @@ internal static class HydroComponentsExtensions
             }
 
             var htmlContent = await TagHelperRenderer.RenderTagHelper(componentType, httpContext);
+
+            if (httpContext.Response.Headers.ContainsKey(HydroConsts.ResponseHeaders.SkipOutput))
+            {
+                return HydroEmptyResult.Instance;
+            }
+            
             var content = await GetHtml(htmlContent);
             return Results.Content(content, MediaTypeNames.Text.Html);
         });
