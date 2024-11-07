@@ -576,6 +576,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         IsMount = true;
         await MountAsync();
         await RenderAsync();
+        PopulateDispatchers();
         return await GenerateComponentHtml(componentId, persistentState, includeScripts: true);
     }
 
@@ -599,6 +600,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         IsMount = true;
         await MountAsync();
         await RenderAsync();
+        PopulateDispatchers();
         return await GenerateComponentHtml(componentId, persistentState, includeScripts: true);
     }
 
