@@ -35,7 +35,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     private dynamic _viewBag;
     private CookieStorage _cookieStorage;
     private IPersistentState _persistentState;
-    
+
     private readonly ConcurrentDictionary<CacheKey, object> _requestCache = new();
     private static readonly ConcurrentDictionary<CacheKey, object> PersistentCache = new();
 
@@ -166,7 +166,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     /// </summary>
     [HtmlAttributeNotBound]
     public ViewDataDictionary ViewData => ViewContext.ViewData;
-    
+
     /// <summary>
     /// View bag
     /// </summary>
@@ -195,19 +195,19 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     /// </summary>
     [HtmlAttributeNotBound]
     public HttpContext HttpContext => ViewContext.HttpContext;
-    
+
     /// <summary>
     /// Request
     /// </summary>
     [HtmlAttributeNotBound]
     public HttpRequest Request => ViewContext.HttpContext.Request;
-    
+
     /// <summary>
     /// Request
     /// </summary>
     [HtmlAttributeNotBound]
     public HttpResponse Response => ViewContext.HttpContext.Response;
-    
+
     /// <summary>
     /// RouteData
     /// </summary>
@@ -236,7 +236,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     [HtmlAttributeNotBound]
     public CookieStorage CookieStorage =>
         _cookieStorage ??= new CookieStorage(HttpContext, _persistentState);
-    
+
     /// <summary>
     /// Implementation of ViewComponent's InvokeAsync method
     /// </summary>
@@ -299,12 +299,12 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         };
 
         var view = compositeViewEngine.GetView(null, GetViewPath(), false).View;
-        
+
         if (view == null)
         {
             throw new InvalidOperationException($"The view '{GetViewPath()}' was not found.");
         }
-        
+
         _writer = new StringWriter();
         ViewContext = new ViewContext(ViewContext, view, viewDataDictionary, _writer);
     }
@@ -479,7 +479,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     /// <param name="payload">Payload for the destination components</param>
     public void Location(string url, object payload = null) =>
         HttpContext.Response.HydroLocation(url, payload);
-
+    
     /// <summary>
     /// Cache value
     /// </summary>
@@ -933,7 +933,20 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
 
         if (typeof(Task).IsAssignableFrom(methodInfo.ReturnType))
         {
-            await (Task)methodInfo.Invoke(this, orderedParameters)!;
+            if (methodInfo.ReturnType == typeof(Task<IComponentResult>))
+            {
+                var result = await (Task<IComponentResult>)methodInfo.Invoke(this, orderedParameters)!;
+                await result.ExecuteAsync(HttpContext, this);
+            }
+            else
+            {
+                await (Task)methodInfo.Invoke(this, orderedParameters)!;
+            }
+        }
+        else if (typeof(IComponentResult).IsAssignableFrom(methodInfo.ReturnType))
+        {
+            var result = (IComponentResult)methodInfo.Invoke(this, orderedParameters)!;
+            await result.ExecuteAsync(HttpContext, this);
         }
         else
         {

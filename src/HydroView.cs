@@ -61,6 +61,11 @@ public abstract class HydroView : TagHelper
         output.TagName = null;
         output.Content.SetHtmlContent(html);
     }
+    
+    /// <summary>
+    /// Used to reference other components in the event handlers
+    /// </summary>
+    public T Reference<T>() => default;
 
     private async Task<string> GetViewHtml()
     {

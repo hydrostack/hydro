@@ -496,13 +496,32 @@
           const locationHeader = response.headers.get('Hydro-Location');
           if (locationHeader) {
             let locationData = JSON.parse(locationHeader);
-
             await loadPageContent(locationData.path, true, null, locationData.payload);
           }
 
           const redirectHeader = response.headers.get('Hydro-Redirect');
           if (redirectHeader) {
             window.location.href = redirectHeader;
+          }
+
+          const contentDisposition = response.headers.get('Content-Disposition');
+
+          if (contentDisposition) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+
+            if (contentDisposition.includes('inline')) {
+              window.open(url, '_blank');
+            } else if (contentDisposition.includes('attachment')) {
+              const fileName = extractFileNameFromContentDisposition(contentDisposition);
+
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = fileName || 'file';
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+            }
           }
 
           setTimeout(() => { // make sure the event handlers got registered
@@ -577,6 +596,25 @@
         }
       }
     }
+  }
+
+  function extractFileNameFromContentDisposition(disposition) {
+    const props = disposition.split(';').map(prop => prop.trim().split('='));
+
+    const encodedFileName = props.find(prop => prop[0] === 'filename*');
+
+    const encodingMark = "utf-8''";
+    if (encodedFileName && encodedFileName[1].toLowerCase().startsWith(encodingMark)) {
+      return decodeURIComponent(encodedFileName[1].substring(encodingMark.length));
+    }
+
+    const regularFileName = props.find(prop => prop[0] === 'filename');
+
+    if (regularFileName) {
+      return regularFileName[1].replace(/['"]/g, '');
+    }
+
+    return null;
   }
 
   function toBase64Json(value) {

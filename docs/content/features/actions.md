@@ -106,6 +106,60 @@ public class Counter : HydroComponent
 </div>
 ```
 
+## Results
+
+Hydro provides multiple component results that can be returned from an action:
+
+- `ComponentResults.Challenge`
+
+    Calls `HttpContext.ChallangeAsync` and handles further redirections
+
+- `ComponentResults.SignIn`
+
+    Calls `HttpContext.SignInAsync` and handles further redirections
+
+- `ComponentResults.SignOut`
+
+    Calls `HttpContext.SignOutAsync` and handles further redirections
+
+- `ComponentResults.File`
+    
+    Returns a file from the server
+
+
+
+Examples:
+
+```c#
+// ShowInvoice.cshtml.cs
+
+public class ShowInvoice : HydroComponent
+{
+    public IComponentResult Download()
+    {
+        return ComponentResults.File("./storage/file.pdf", MediaTypeNames.Application.Pdf);
+    }
+}
+```
+
+```c#
+// Profile.cshtml.cs
+
+public class Profile : HydroComponent
+{
+    public IComponentResult LoginWithGitHub()
+    {
+        var properties = new AuthenticationProperties
+        {
+            RedirectUri = RedirectUri, 
+            IsPersistent = true
+        };
+
+        return ComponentResults.Challenge(properties, [GitHubAuthenticationDefaults.AuthenticationScheme]);
+    }
+}
+```
+
 ## JavaScript expression as a parameter
 
 In some cases, like integrating with JavaScript libraries like maps, rich-text editors, etc. it might be useful to
