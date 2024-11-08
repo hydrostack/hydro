@@ -119,9 +119,9 @@ Usage:
 </form-button>
 ```
 
-## Calling actions of specific Hydro components
+## Calling actions of a parent Hydro component
 
-You can call an action of a specific Hydro component from a Hydro view using the `Reference<T>`. Example:
+You can call an action of a parent Hydro component from a Hydro view using the `Reference<T>`. Example:
 
 Parent (Hydro component):
 
