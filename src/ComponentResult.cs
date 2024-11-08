@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Net.Http.Headers;
 
 namespace Hydro;
 
@@ -27,17 +28,26 @@ internal class ComponentResult : IComponentResult
     public async Task ExecuteAsync(HttpContext httpContext, HydroComponent component)
     {
         var response = httpContext.Response;
-        
+
         response.Headers.TryAdd(HydroConsts.ResponseHeaders.SkipOutput, "True");
 
         if (_type == ComponentResultType.File)
         {
-            response.Headers.Append("Content-Disposition", "inline");
+            
+            response.Headers.Append(HeaderNames.ContentDisposition, "inline");
         }
-        
-        await _result.ExecuteAsync(httpContext);
-        
-        if (response.Headers.Remove("Location", out var location))
+
+        try
+        {
+            await _result.ExecuteAsync(httpContext);
+        }
+        catch
+        {
+            response.Headers.Remove(HeaderNames.ContentDisposition);
+            throw;
+        }
+
+        if (response.Headers.Remove(HeaderNames.Location, out var location))
         {
             response.StatusCode = StatusCodes.Status200OK;
             component.Redirect(location);

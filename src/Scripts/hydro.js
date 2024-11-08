@@ -524,34 +524,7 @@
             }
           }
 
-          setTimeout(() => { // make sure the event handlers got registered
-            const triggerHeader = response.headers.get('Hydro-Trigger');
-            if (triggerHeader) {
-              const triggers = JSON.parse(triggerHeader);
-              triggers.forEach(trigger => {
-                if (trigger.scope === 'parent' && !parentComponent) {
-                  return;
-                }
-
-                const eventScope = trigger.scope === 'parent' ? parentComponent.id : 'global';
-                const eventName = `${eventScope}:${trigger.name}`;
-                const eventData = {
-                  detail: {
-                    data: trigger.data,
-                    subject: trigger.subject,
-                    operationId: trigger.operationId
-                  }
-                };
-
-                document.dispatchEvent(new CustomEvent(eventName, eventData));
-
-                if (trigger.subject) {
-                  const subjectEventName = `${eventScope}:${trigger.name}:${trigger.subject}`;
-                  document.dispatchEvent(new CustomEvent(subjectEventName, eventData));
-                }
-              });
-            }
-          });
+          dispatchEvents(response.headers.get('Hydro-Trigger'), component);
         }
       } catch (error) {
         document.dispatchEvent(new CustomEvent(`unhandled-hydro-error`, { detail: { name: error.name, message: error.message } }));
@@ -574,6 +547,40 @@
           }
         }, 20); // make sure it's delayed more than 0 and less than 50
       }
+    });
+  }
+
+  function dispatchEvents(serializedEvents, componentElement) {
+    if (!serializedEvents) {
+      return;
+    }
+
+    const parentComponent = componentElement ? findComponent(componentElement.parentElement) : null;
+
+    const events = JSON.parse(serializedEvents);
+    events.forEach(trigger => {
+      if (trigger.scope === 'parent' && !parentComponent) {
+        return;
+      }
+
+      const eventScope = trigger.scope === 'parent' ? parentComponent.id : 'global';
+      const eventName = `${eventScope}:${trigger.name}`;
+      const eventData = {
+        detail: {
+          data: trigger.data,
+          subject: trigger.subject,
+          operationId: trigger.operationId
+        }
+      };
+
+      setTimeout(() => {
+        document.dispatchEvent(new CustomEvent(eventName, eventData));
+
+        if (trigger.subject) {
+          const subjectEventName = `${eventScope}:${trigger.name}:${trigger.subject}`;
+          document.dispatchEvent(new CustomEvent(subjectEventName, eventData));
+        }
+      });
     });
   }
 
@@ -669,6 +676,7 @@
     generateGuid,
     waitFor,
     executeComponentJs,
+    dispatchEvents,
     config
   };
 }

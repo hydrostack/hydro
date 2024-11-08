@@ -576,7 +576,6 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         IsMount = true;
         await MountAsync();
         await RenderAsync();
-        PopulateDispatchers();
         return await GenerateComponentHtml(componentId, persistentState, includeScripts: true);
     }
 
@@ -596,7 +595,6 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         IsMount = true;
         await MountAsync();
         await RenderAsync();
-        PopulateDispatchers();
         return await GenerateComponentHtml(componentId, persistentState, includeScripts: true);
     }
 
@@ -654,6 +652,11 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
 
         if (includeScripts)
         {
+            if (_dispatchEvents.Any())
+            {
+                AddClientScript($"Hydro.dispatchEvents('{GetSerializedEventDispatchers()}', this);");
+            }
+            
             foreach (var script in _clientScripts)
             {
                 rootElement.AppendChild(GetClientScript(componentHtmlDocument, script));
@@ -823,6 +826,11 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
             return;
         }
 
+        HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.Trigger, GetSerializedEventDispatchers());
+    }
+
+    private string GetSerializedEventDispatchers()
+    {
         var data = _dispatchEvents
             .Select(e => new
             {
@@ -834,7 +842,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
             })
             .ToList();
 
-        HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.Trigger, JsonConvert.SerializeObject(data, JsonSerializerSettings));
+        return JsonConvert.SerializeObject(data, JsonSerializerSettings);
     }
 
     private void PopulateClientScripts()
