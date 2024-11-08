@@ -61,6 +61,6 @@ In layout's `head` tag:
 <script defer src="~/hydro/alpine.js" asp-append-version="true"></script>
 ```
 
-> NOTE: Hydro provides Alpine.js v3.13.3 with extensions combined into one file (`~/hydro/alpine.js`) for convenience. If you don't want to rely on the scripts provided by Hydro, you can manually specify Alpine.js sources. Make sure to include Alpine.js core script and Morph plugin.
+> NOTE: Hydro provides Alpine.js v3.14.3 with extensions combined into one file (`~/hydro/alpine.js`) for convenience. If you don't want to rely on the scripts provided by Hydro, you can manually specify Alpine.js sources. Make sure to include Alpine.js core script and Morph plugin.
 
 Now you are ready to create you first [component](/features/components).
