@@ -34,7 +34,7 @@ internal static class PropertyInjector
         var viewComponentType = typeof(TagHelper);
         var hydroComponentType = typeof(HydroComponent);
 
-        var baseProps = new[] { "Key", "KeyBehavior" };
+        var baseProps = new[] { "Key", "IsModelTouched", "TouchedProperties" };
         
         var propertyInfos = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
             .Where(p => (baseProps.Contains(p.Name) && p.DeclaringType == hydroComponentType)

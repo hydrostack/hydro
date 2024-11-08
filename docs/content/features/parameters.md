@@ -150,17 +150,6 @@ You can also use `key` to force re-render of your component:
 Where `CalculateHashCode` is an extension method returning unique hash code for the collection.
 Now, whenever `Model.Items` changes, Hydro will re-render the component `Items` and pass new parameter.
 
-### Key attribute behavior in the UI
-
-By default, when a component with the same key attribute is
-re-rendered, its HTML is replaced (not morphed). Since `key` is also used to force re-render of the component,
-there might be a case where you want to morph the component HTML instead, for example when the rendered component
-is the one where might be the focus. To do that, use `key-behavior` attribute:
-
-```razor
-<currency key="PL" key-behavior="Morph" />
-```
-
 ## Caching
 
 Let's imagine you need to show list of customers in a table. It's good to use caching per request for such rows data,

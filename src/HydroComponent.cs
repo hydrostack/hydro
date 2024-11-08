@@ -565,7 +565,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
 
         if (IsComponentIdRendered(componentId))
         {
-            return GetComponentPlaceholderTemplate(componentId, Key, KeyBehavior);
+            return GetComponentPlaceholderTemplate(componentId);
         }
 
         if (!await AuthorizeAsync())
@@ -580,12 +580,8 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         return await GenerateComponentHtml(componentId, persistentState, includeScripts: true);
     }
 
-    private static string GetComponentPlaceholderTemplate(string componentId, string key, KeyBehavior keyBehavior)
-    {
-        var useKey = !string.IsNullOrWhiteSpace(key) && keyBehavior == KeyBehavior.Replace;
-
-        return $"<div id=\"{componentId}\" {(useKey ? $"key=\"{key}\"" : "")} hydro hydro-placeholder></div>";
-    }
+    private static string GetComponentPlaceholderTemplate(string componentId) =>
+        $"<div id=\"{componentId}\" key=\"{componentId}\" hydro hydro-placeholder></div>";
 
     private async Task<string> RenderStaticComponent(IPersistentState persistentState)
     {
@@ -636,11 +632,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         rootElement.SetAttributeValue("id", componentId);
         rootElement.SetAttributeValue("hydro-name", GetType().Name);
         rootElement.SetAttributeValue("x-data", "hydro");
-
-        if (!string.IsNullOrWhiteSpace(Key) && KeyBehavior == KeyBehavior.Replace)
-        {
-            rootElement.SetAttributeValue("key", Key);
-        }
+        rootElement.SetAttributeValue("key", componentId);
 
         var hydroAttribute = rootElement.SetAttributeValue("hydro", null);
         hydroAttribute.QuoteType = AttributeValueQuote.WithoutValue;
