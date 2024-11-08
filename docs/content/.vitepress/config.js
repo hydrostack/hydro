@@ -63,8 +63,8 @@ export default defineConfig({
     ],
 
     socialLinks: [
+      { icon: 'x', link: 'https://x.com/usehydro' },
       { icon: 'github', link: 'https://github.com/hydrostack/hydro/' },
-      // { icon: 'twitter', link: 'https://twitter.com/usehydro' },
     ]
   }
 })
