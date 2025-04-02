@@ -15,7 +15,7 @@ public static class ApplicationBuilderExtensions
     /// </summary>
     /// <param name="builder">The <see cref="IApplicationBuilder"/> instance this method extends.</param>
     /// <param name="environment">Current environment</param>
-    public static IApplicationBuilder UseHydro(this IApplicationBuilder builder, IWebHostEnvironment environment) =>
+    public static IApplicationBuilder UseHydro(this IApplicationBuilder builder, IWebHostEnvironment environment = null) =>
         builder.UseHydro(environment, Assembly.GetCallingAssembly());
 
     /// <summary>
@@ -36,6 +36,8 @@ public static class ApplicationBuilderExtensions
                 endpoints.MapHydroComponent(type);
             }
         });
+
+        environment ??= (IWebHostEnvironment)builder.ApplicationServices.GetService(typeof(IWebHostEnvironment))!;
         
         var existingProvider = environment.WebRootFileProvider; 
 

@@ -23,7 +23,7 @@ builder.Services.AddHydro();
 
 ...
 
-app.UseHydro(builder.Environment);
+app.UseHydro();
 ```
 
 > **_NOTE:_** Make sure that `UseHydro` is called after `UseStaticFiles` and `UseRouting`, which are required.
@@ -43,7 +43,7 @@ var app = builder.Build();
 app.UseStaticFiles();
 app.UseRouting();
 app.MapRazorPages();
-app.UseHydro(builder.Environment); // Hydro
+app.UseHydro(); // Hydro
 
 app.Run();
 ```
