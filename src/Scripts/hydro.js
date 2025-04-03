@@ -286,7 +286,12 @@
 
     if (document.activeElement && document.activeElement !== el) {
       const elToCheck = document.activeElement;
-      if (Array.from(elToCheck.attributes).some(attr => attr.name.startsWith('x-hydro-bind')) && isElementDirty(elToCheck)) {
+      const elToCheckComponent = findComponent(elToCheck);
+      if (Array.from(elToCheck.attributes).some(attr => attr.name.startsWith('x-hydro-bind'))
+        && isElementDirty(elToCheck)
+        && elToCheckComponent
+        && component.id === elToCheckComponent.id
+      ) {
         await hydroBind(elToCheck);
       }
     }
