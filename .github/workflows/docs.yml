@@ -42,7 +42,7 @@ jobs:
           npm run docs:build
           touch content/.vitepress/dist/.nojekyll
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@3.0.1
         with:
           path: docs/content/.vitepress/dist
 
