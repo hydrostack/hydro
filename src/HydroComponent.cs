@@ -533,11 +533,13 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         _componentId = componentId;
 
         PopulateBaseModel(persistentState);
-        await PopulateRequestModel();
+        
         if (!await AuthorizeAsync())
         {
             return string.Empty;
         }
+
+        await PopulateRequestModel();
 
         await TriggerEvent();
 
