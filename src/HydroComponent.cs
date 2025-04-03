@@ -283,7 +283,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         catch (Exception e)
         {
             HandleError(e);
-            output.Content.SetHtmlContent(string.Empty);
+            throw;
         }
     }
 
