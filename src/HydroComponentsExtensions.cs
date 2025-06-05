@@ -1,26 +1,20 @@
-﻿using System.Net.Mime;
-using System.Text.Encodings.Web;
+﻿using Hydro.Configuration;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Hydro.Configuration;
-using Hydro.Utils;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System.Net.Mime;
+using System.Text.Encodings.Web;
 
 namespace Hydro;
 
 internal static class HydroComponentsExtensions
 {
-    private static readonly JsonSerializerSettings JsonSerializerSettings = new()
-    {
-        Converters = new JsonConverter[] { new Int32Converter() }.ToList()
-    };
-
-    public static void MapHydroComponent(this IEndpointRouteBuilder app, Type componentType)
+    public static void MapHydroComponent(this IEndpointRouteBuilder app, Type componentType, JsonSerializerSettings jsonSerializerSettings)
     {
         var componentName = componentType.Name;
 
@@ -51,7 +45,7 @@ internal static class HydroComponentsExtensions
 
             if (httpContext.IsHydro())
             {
-                await ExecuteRequestOperations(httpContext, method);
+                await ExecuteRequestOperations(httpContext, method, jsonSerializerSettings);
             }
 
             var htmlContent = await TagHelperRenderer.RenderTagHelper(componentType, httpContext);
@@ -66,7 +60,7 @@ internal static class HydroComponentsExtensions
         });
     }
 
-    private static async Task ExecuteRequestOperations(HttpContext context, string method)
+    private static async Task ExecuteRequestOperations(HttpContext context, string method, JsonSerializerSettings jsonSerializerSettings)
     {
         if (!context.Request.HasFormContentType)
         {
@@ -81,7 +75,7 @@ internal static class HydroComponentsExtensions
 
         var model = hydroData["__hydro_model"].First();
         var type = hydroData["__hydro_type"].First();
-        var parameters = JsonConvert.DeserializeObject<Dictionary<string, object>>(hydroData["__hydro_parameters"].FirstOrDefault("{}"), JsonSerializerSettings);
+        var parameters = JsonConvert.DeserializeObject<Dictionary<string, object>>(hydroData["__hydro_parameters"].FirstOrDefault("{}"), jsonSerializerSettings);
         var eventData = JsonConvert.DeserializeObject<HydroEventPayload>(hydroData["__hydro_event"].FirstOrDefault(string.Empty));
         var componentIds = JsonConvert.DeserializeObject<string[]>(hydroData["__hydro_componentIds"].FirstOrDefault("[]"));
         var form = new FormCollection(formValues, hydroData.Files);

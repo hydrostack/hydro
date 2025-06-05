@@ -48,7 +48,10 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     private static readonly MethodInfo InvokeActionMethod = typeof(HydroComponent).GetMethod(nameof(InvokeAction), BindingFlags.Static | BindingFlags.NonPublic);
     private static readonly MethodInfo InvokeActionAsyncMethod = typeof(HydroComponent).GetMethod(nameof(InvokeActionAsync), BindingFlags.Static | BindingFlags.NonPublic);
 
-    internal static readonly JsonSerializerSettings JsonSerializerSettings = new()
+    /// <summary>
+    /// Default HydroComponent serializer settings
+    /// </summary>
+    public static readonly JsonSerializerSettings JsonSerializerSettings = new()
     {
         Converters = new JsonConverter[] { new Int32Converter() }.ToList(),
         ReferenceLoopHandling = ReferenceLoopHandling.Ignore
@@ -774,12 +777,19 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Can be used to customize serialization of HydroComponents if required. <see cref="JsonSerializerSettings"/> should be used as base setting
+    /// </summary>
+    /// <returns></returns>
+    protected virtual JsonSerializerSettings GetJsonSerializerSettings()
+        => JsonSerializerSettings;
+
     private HtmlNode GetModelScript(HtmlDocument document, string id, IPersistentState persistentState)
     {
         var scriptNode = document.CreateElement("script");
         scriptNode.SetAttributeValue("type", "text/hydro");
         scriptNode.SetAttributeValue("data-id", id);
-        var serializeDeclaredProperties = PropertyInjector.SerializeDeclaredProperties(GetType(), this);
+        var serializeDeclaredProperties = PropertyInjector.SerializeDeclaredProperties(GetType(), this, GetJsonSerializerSettings());
         var model = persistentState.Compress(serializeDeclaredProperties);
         scriptNode.AppendChild(document.CreateTextNode(model));
         return scriptNode;
