@@ -8,6 +8,7 @@ using HtmlAgilityPack;
 using Hydro.Configuration;
 using Hydro.Services;
 using Hydro.Utils;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -48,14 +49,13 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     private static readonly MethodInfo InvokeActionMethod = typeof(HydroComponent).GetMethod(nameof(InvokeAction), BindingFlags.Static | BindingFlags.NonPublic);
     private static readonly MethodInfo InvokeActionAsyncMethod = typeof(HydroComponent).GetMethod(nameof(InvokeActionAsync), BindingFlags.Static | BindingFlags.NonPublic);
 
-    /// <summary>
-    /// Default HydroComponent serializer settings
-    /// </summary>
-    public static readonly JsonSerializerSettings JsonSerializerSettings = new()
+    internal static readonly JsonSerializerSettings JsonSerializerSettings = new()
     {
         Converters = new JsonConverter[] { new Int32Converter() }.ToList(),
         ReferenceLoopHandling = ReferenceLoopHandling.Ignore
     };
+
+    [CanBeNull] private static JsonSerializerSettings _customJsonSerializerSettings;
 
     private static readonly ConcurrentDictionary<Type, IHydroAuthorizationFilter[]> ComponentAuthorizationAttributes = new();
     private HydroOptions _options;
@@ -777,13 +777,6 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Can be used to customize serialization of HydroComponents if required. <see cref="JsonSerializerSettings"/> should be used as base setting
-    /// </summary>
-    /// <returns></returns>
-    protected virtual JsonSerializerSettings GetJsonSerializerSettings()
-        => JsonSerializerSettings;
-
     private HtmlNode GetModelScript(HtmlDocument document, string id, IPersistentState persistentState)
     {
         var scriptNode = document.CreateElement("script");
@@ -793,6 +786,17 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         var model = persistentState.Compress(serializeDeclaredProperties);
         scriptNode.AppendChild(document.CreateTextNode(model));
         return scriptNode;
+    }
+
+    private JsonSerializerSettings GetJsonSerializerSettings()
+    {
+        if (_customJsonSerializerSettings != null)
+            return _customJsonSerializerSettings;
+
+        var clone = new JsonSerializerSettings(JsonSerializerSettings);
+        _options.ModifyJsonSerializerSettings?.Invoke(clone);
+
+        return _customJsonSerializerSettings = clone;
     }
 
     private HtmlNode GetEventSubscriptionScript(HtmlDocument document, HydroEventSubscription subscription)
@@ -809,7 +813,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         scriptNode.SetAttributeValue("type", "text/hydro");
         scriptNode.SetAttributeValue("hydro-event", "true");
         scriptNode.SetAttributeValue("x-data", "");
-        scriptNode.SetAttributeValue("x-on-hydro-event", JsonConvert.SerializeObject(eventData, JsonSerializerSettings));
+        scriptNode.SetAttributeValue("x-on-hydro-event", JsonConvert.SerializeObject(eventData, GetJsonSerializerSettings()));
         return scriptNode;
     }
 
@@ -854,7 +858,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
             })
             .ToList();
 
-        return JsonConvert.SerializeObject(data, JsonSerializerSettings);
+        return JsonConvert.SerializeObject(data, GetJsonSerializerSettings());
     }
 
     private void PopulateClientScripts()
