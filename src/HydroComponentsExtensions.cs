@@ -1,20 +1,40 @@
-﻿using Hydro.Configuration;
+using System.Net.Mime;
+using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Hydro.Configuration;
+using Hydro.Utils;
+using JetBrains.Annotations;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System.Net.Mime;
-using System.Text.Encodings.Web;
 
 namespace Hydro;
 
 internal static class HydroComponentsExtensions
 {
-    public static void MapHydroComponent(this IEndpointRouteBuilder app, Type componentType, JsonSerializerSettings jsonSerializerSettings)
+    private static readonly JsonSerializerSettings JsonSerializerSettings = new()
+    {
+        Converters = new JsonConverter[] { new Int32Converter() }.ToList()
+    };
+    
+    [CanBeNull] private static JsonSerializerSettings _customJsonSerializerSettings;
+    
+    private static JsonSerializerSettings GetJsonSerializerSettings(HydroOptions options)
+    {
+        if (_customJsonSerializerSettings != null)
+            return _customJsonSerializerSettings;
+
+        var clone = new JsonSerializerSettings(JsonSerializerSettings);
+        options.ModifyJsonSerializerSettings?.Invoke(clone);
+
+        return _customJsonSerializerSettings = clone;
+    }
+
+    public static void MapHydroComponent(this IEndpointRouteBuilder app, Type componentType)
     {
         var componentName = componentType.Name;
 
@@ -45,7 +65,8 @@ internal static class HydroComponentsExtensions
 
             if (httpContext.IsHydro())
             {
-                await ExecuteRequestOperations(httpContext, method, jsonSerializerSettings);
+                var serializerSettings = GetJsonSerializerSettings(hydroOptions);
+                await ExecuteRequestOperations(httpContext, method, serializerSettings);
             }
 
             var htmlContent = await TagHelperRenderer.RenderTagHelper(componentType, httpContext);
