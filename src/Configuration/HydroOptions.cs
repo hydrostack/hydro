@@ -13,7 +13,7 @@ public class HydroOptions
     internal Dictionary<Type, IHydroValueMapper> ValueMappersDictionary { get; set; } = new();
     
     /// <summary>
-    /// Serializer settings for add Custom Convertors
+    /// Serializer settings to modify Newtonsoft.Json
     /// </summary>
     [CanBeNull]
     public Action<JsonSerializerSettings> ModifyJsonSerializerSettings { get; set; }
