@@ -8,7 +8,6 @@ using HtmlAgilityPack;
 using Hydro.Configuration;
 using Hydro.Services;
 using Hydro.Utils;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -54,8 +53,6 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         Converters = new JsonConverter[] { new Int32Converter() }.ToList(),
         ReferenceLoopHandling = ReferenceLoopHandling.Ignore
     };
-
-    [CanBeNull] private static JsonSerializerSettings _customJsonSerializerSettings;
 
     private static readonly ConcurrentDictionary<Type, IHydroAuthorizationFilter[]> ComponentAuthorizationAttributes = new();
     private HydroOptions _options;
@@ -782,21 +779,10 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         var scriptNode = document.CreateElement("script");
         scriptNode.SetAttributeValue("type", "text/hydro");
         scriptNode.SetAttributeValue("data-id", id);
-        var serializeDeclaredProperties = PropertyInjector.SerializeDeclaredProperties(GetType(), this, GetJsonSerializerSettings());
+        var serializeDeclaredProperties = PropertyInjector.SerializeDeclaredProperties(GetType(), this);
         var model = persistentState.Compress(serializeDeclaredProperties);
         scriptNode.AppendChild(document.CreateTextNode(model));
         return scriptNode;
-    }
-
-    private JsonSerializerSettings GetJsonSerializerSettings()
-    {
-        if (_customJsonSerializerSettings != null)
-            return _customJsonSerializerSettings;
-
-        var clone = new JsonSerializerSettings(JsonSerializerSettings);
-        _options.ModifyJsonSerializerSettings?.Invoke(clone);
-
-        return _customJsonSerializerSettings = clone;
     }
 
     private HtmlNode GetEventSubscriptionScript(HtmlDocument document, HydroEventSubscription subscription)
@@ -813,7 +799,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         scriptNode.SetAttributeValue("type", "text/hydro");
         scriptNode.SetAttributeValue("hydro-event", "true");
         scriptNode.SetAttributeValue("x-data", "");
-        scriptNode.SetAttributeValue("x-on-hydro-event", JsonConvert.SerializeObject(eventData, GetJsonSerializerSettings()));
+        scriptNode.SetAttributeValue("x-on-hydro-event", JsonConvert.SerializeObject(eventData, JsonSerializerSettings));
         return scriptNode;
     }
 
@@ -858,7 +844,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
             })
             .ToList();
 
-        return JsonConvert.SerializeObject(data, GetJsonSerializerSettings());
+        return JsonConvert.SerializeObject(data, JsonSerializerSettings);
     }
 
     private void PopulateClientScripts()

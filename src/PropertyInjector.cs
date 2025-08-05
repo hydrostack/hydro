@@ -14,10 +14,10 @@ internal static class PropertyInjector
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> CachedPropertyInfos = new();
     private static readonly ConcurrentDictionary<string, PropertyInfo> PropertyCache = new();
 
-    public static string SerializeDeclaredProperties(Type type, object instance, JsonSerializerSettings serializerSettings)
+    public static string SerializeDeclaredProperties(Type type, object instance)
     {
         var regularProperties = GetRegularProperties(type, instance);
-        return JsonConvert.SerializeObject(regularProperties, serializerSettings);
+        return JsonConvert.SerializeObject(regularProperties, HydroComponent.JsonSerializerSettings);
     }
 
     private static IDictionary<string, object> GetRegularProperties(Type type, object instance) =>

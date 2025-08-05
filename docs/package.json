@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "vitepress": "^1.0.0-rc.15"
+    "vitepress": "^1.6.4"
   },
   "type": "module",
   "scripts": {

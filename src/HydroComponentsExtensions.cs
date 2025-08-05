@@ -7,8 +7,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Hydro.Configuration;
-using Hydro.Utils;
-using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -16,24 +14,6 @@ namespace Hydro;
 
 internal static class HydroComponentsExtensions
 {
-    private static readonly JsonSerializerSettings JsonSerializerSettings = new()
-    {
-        Converters = new JsonConverter[] { new Int32Converter() }.ToList()
-    };
-    
-    [CanBeNull] private static JsonSerializerSettings _customJsonSerializerSettings;
-    
-    private static JsonSerializerSettings GetJsonSerializerSettings(HydroOptions options)
-    {
-        if (_customJsonSerializerSettings != null)
-            return _customJsonSerializerSettings;
-
-        var clone = new JsonSerializerSettings(JsonSerializerSettings);
-        options.ModifyJsonSerializerSettings?.Invoke(clone);
-
-        return _customJsonSerializerSettings = clone;
-    }
-
     public static void MapHydroComponent(this IEndpointRouteBuilder app, Type componentType)
     {
         var componentName = componentType.Name;
@@ -65,8 +45,7 @@ internal static class HydroComponentsExtensions
 
             if (httpContext.IsHydro())
             {
-                var serializerSettings = GetJsonSerializerSettings(hydroOptions);
-                await ExecuteRequestOperations(httpContext, method, serializerSettings);
+                await ExecuteRequestOperations(httpContext, method);
             }
 
             var htmlContent = await TagHelperRenderer.RenderTagHelper(componentType, httpContext);
@@ -81,7 +60,7 @@ internal static class HydroComponentsExtensions
         });
     }
 
-    private static async Task ExecuteRequestOperations(HttpContext context, string method, JsonSerializerSettings jsonSerializerSettings)
+    private static async Task ExecuteRequestOperations(HttpContext context, string method)
     {
         if (!context.Request.HasFormContentType)
         {
@@ -96,7 +75,7 @@ internal static class HydroComponentsExtensions
 
         var model = hydroData["__hydro_model"].First();
         var type = hydroData["__hydro_type"].First();
-        var parameters = JsonConvert.DeserializeObject<Dictionary<string, object>>(hydroData["__hydro_parameters"].FirstOrDefault("{}"), jsonSerializerSettings);
+        var parameters = JsonConvert.DeserializeObject<Dictionary<string, object>>(hydroData["__hydro_parameters"].FirstOrDefault("{}"), HydroComponent.JsonSerializerSettings);
         var eventData = JsonConvert.DeserializeObject<HydroEventPayload>(hydroData["__hydro_event"].FirstOrDefault(string.Empty));
         var componentIds = JsonConvert.DeserializeObject<string[]>(hydroData["__hydro_componentIds"].FirstOrDefault("[]"));
         var form = new FormCollection(formValues, hydroData.Files);
