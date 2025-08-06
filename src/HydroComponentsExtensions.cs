@@ -1,4 +1,4 @@
-﻿using System.Net.Mime;
+using System.Net.Mime;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Builder;
@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Hydro.Configuration;
-using Hydro.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -15,11 +14,6 @@ namespace Hydro;
 
 internal static class HydroComponentsExtensions
 {
-    private static readonly JsonSerializerSettings JsonSerializerSettings = new()
-    {
-        Converters = new JsonConverter[] { new Int32Converter() }.ToList()
-    };
-
     public static void MapHydroComponent(this IEndpointRouteBuilder app, Type componentType)
     {
         var componentName = componentType.Name;
@@ -81,7 +75,7 @@ internal static class HydroComponentsExtensions
 
         var model = hydroData["__hydro_model"].First();
         var type = hydroData["__hydro_type"].First();
-        var parameters = JsonConvert.DeserializeObject<Dictionary<string, object>>(hydroData["__hydro_parameters"].FirstOrDefault("{}"), JsonSerializerSettings);
+        var parameters = JsonConvert.DeserializeObject<Dictionary<string, object>>(hydroData["__hydro_parameters"].FirstOrDefault("{}"), HydroComponent.JsonSerializerSettings);
         var eventData = JsonConvert.DeserializeObject<HydroEventPayload>(hydroData["__hydro_event"].FirstOrDefault(string.Empty));
         var componentIds = JsonConvert.DeserializeObject<string[]>(hydroData["__hydro_componentIds"].FirstOrDefault("[]"));
         var form = new FormCollection(formValues, hydroData.Files);

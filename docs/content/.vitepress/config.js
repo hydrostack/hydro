@@ -45,6 +45,7 @@ export default defineConfig({
         text: 'Advanced',
         items: [
           { text: 'Request queuing', link: '/advanced/request-queuing' },
+          { text: 'Additional options', link: '/advanced/additional-options' },
           // { text: 'Load balancing', link: '/advanced/load-balancing' },
         ]
       },

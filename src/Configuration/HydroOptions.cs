@@ -1,4 +1,6 @@
-﻿namespace Hydro.Configuration;
+using Newtonsoft.Json;
+
+namespace Hydro.Configuration;
 
 /// <summary>
 /// Hydro options
@@ -8,6 +10,11 @@ public class HydroOptions
     private IEnumerable<IHydroValueMapper> _valueMappers;
 
     internal Dictionary<Type, IHydroValueMapper> ValueMappersDictionary { get; set; } = new();
+
+    /// <summary>
+    /// Serializer settings
+    /// </summary>
+    public JsonSerializerSettings JsonSerializerSettings => HydroComponent.JsonSerializerSettings;
     
     /// <summary>
     /// Indicates if antiforgery token should be exchanged during the communication
