@@ -67,6 +67,11 @@ public abstract class HydroView : TagHelper
     /// </summary>
     public T Reference<T>() => default;
 
+    /// <summary>
+    /// Override this property if you want to use custom view path for the component
+    /// </summary>
+    public virtual string ViewPath => null;
+    
     private async Task<string> GetViewHtml()
     {
         var services = ViewContext.HttpContext.RequestServices;
@@ -77,6 +82,11 @@ public abstract class HydroView : TagHelper
         
         var view = GetView(compositeViewEngine, viewType)
             ?? GetView(compositeViewEngine, viewType, path => path.Replace("TagHelper.cshtml", ".cshtml"));
+
+        if (view == null)
+        {
+            throw new HydroException($"The view '{GetViewPath(viewType)}' was not found.");
+        }
         
         await using var writer = new StringWriter();
         var viewDataDictionary = new ViewDataDictionary(modelMetadataProvider, ModelState)
@@ -112,10 +122,23 @@ public abstract class HydroView : TagHelper
     /// </summary>
     private IView GetView(IViewEngine viewEngine, Type type, Func<string, string> nameConverter = null)
     {
-        var assemblyName = type.Assembly.GetName().Name;
-        var path = $"{type.FullName!.Replace(assemblyName!, "~").Replace(".", "/")}.cshtml";
+        var path = GetViewPath(type);
         var adjustedPath = nameConverter != null ? nameConverter(path) : path;
         return viewEngine.GetView(null, adjustedPath, false).View;
+    }
+    
+    /// <summary>
+    /// Get the view path based on the type
+    /// </summary>
+    protected string GetViewPath(Type type)
+    {
+        if (ViewPath != null)
+        {
+            return ViewPath;
+        }
+        
+        var assemblyName = type.Assembly.GetName().Name;
+        return $"{type.FullName!.Replace(assemblyName!, "~").Replace(".", "/")}.cshtml";
     }
     
     private void ApplyObjectFromDictionary<T>(T target, IDictionary<string, object> source)

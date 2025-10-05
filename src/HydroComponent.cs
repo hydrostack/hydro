@@ -302,7 +302,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
 
         if (view == null)
         {
-            throw new InvalidOperationException($"The view '{GetViewPath()}' was not found.");
+            throw new HydroException($"The view '{GetViewPath()}' was not found.");
         }
 
         _writer = new StringWriter();
