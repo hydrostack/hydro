@@ -479,7 +479,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     /// <param name="payload">Payload for the destination components</param>
     public void Location(string url, object payload = null) =>
         HttpContext.Response.HydroLocation(url, payload);
-    
+
     /// <summary>
     /// Cache value
     /// </summary>
@@ -511,6 +511,17 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         return cacheValue;
     }
 
+    /// <summary>
+    /// Skips generating the HTML output after executing the decorated Hydro action.
+    /// Any changes to the state won't be persisted.
+    /// Useful when action is performing only side effects that do not cause changes to the current component's HTML content.
+    /// </summary>
+    protected void SkipOutput()
+    {
+        _skipOutput = true;
+        HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.SkipOutput, "True");
+    }
+
     private async Task<string> RenderOnlineComponent(IPersistentState persistentState) =>
         DetermineRootComponent()
             ? await RenderOnlineRootComponent(persistentState)
@@ -533,7 +544,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         _componentId = componentId;
 
         PopulateBaseModel(persistentState);
-        
+
         if (!await AuthorizeAsync())
         {
             return string.Empty;
@@ -658,7 +669,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
             {
                 AddClientScript($"Hydro.dispatchEvents('{GetSerializedEventDispatchers()}', this);");
             }
-            
+
             foreach (var script in _clientScripts)
             {
                 rootElement.AppendChild(GetClientScript(componentHtmlDocument, script));
@@ -899,8 +910,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
 
         if (methodAttributes.Any(a => a.GetType() == typeof(SkipOutputAttribute)))
         {
-            _skipOutput = true;
-            HttpContext.Response.Headers.TryAdd(HydroConsts.ResponseHeaders.SkipOutput, "True");
+            SkipOutput();
         }
 
         var operationId = HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.OperationId, out var incomingOperationId)
