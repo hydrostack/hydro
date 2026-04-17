@@ -2,15 +2,15 @@
 outline: deep
 ---
 
-# Errors handling
+# Error handling
 
-In regular cases, expected errors handling can be done manually by `try/catch` statements.
-But in cases of unhandled exceptions we want to gracefully inform the user of the situation.
+In regular cases, expected error handling can be done manually by `try/catch` statements.
+But in cases of unhandled exceptions, we want to gracefully inform the user of the situation.
 
-One of the ways to do it when working with Hydro components is to create a global messages
-component for showing alerts, that can be rendered in your layout. Such component could
-subscribe to your own custom events with messages, but it also can listen to built-in
-Hydro's unhandled error event: `UnhandledHydroError`.
+One of the ways to do this when working with Hydro components is to create a global messages
+component for showing alerts, which can be rendered in your layout. Such a component could
+subscribe to your own custom events with messages, but it can also listen to Hydro's
+built-in unhandled error event: `UnhandledHydroError`.
 
 ```c#
 public class Toasts : HydroComponent
@@ -36,9 +36,9 @@ public class Toasts : HydroComponent
 }
 ```
 
-Hydro will send `UnhandledHydroError` in case of unhandled error and by default
-it will contain the response from the server produced by ASP.NET MVC for exceptions,
-which might be to expressive. To customize that you can configure the ASP.NET MVC exception
+Hydro will send `UnhandledHydroError` in the case of an unhandled error, and by default
+it will contain the response from the server that ASP.NET MVC produces for exceptions,
+which might be too expressive. To customize that, you can configure the ASP.NET MVC exception
 handling:
 
 ```c#
@@ -68,5 +68,5 @@ app.UseExceptionHandler(b => b.Run(async context =>
 }));
 ```
 
-In the code above we are creating a JSON response containing `UnhandledHydroError` event that
+In the code above we are creating a JSON response containing an `UnhandledHydroError` event that
 will be consumed in our `Toasts` component.

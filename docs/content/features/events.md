@@ -5,7 +5,7 @@ outline: deep
 # Events
 
 Events in Hydro are a powerful feature for communication between components. Components can publish events that other
-components can subscribe to. The use of events allows components to remain decoupled and promotes a clean architecture.
+components can subscribe to. The use of events allows components to remain decoupled, and promotes a clean architecture.
 
 Here is an example:
 
@@ -15,7 +15,7 @@ Here is an example:
 public record CountChangedEvent(int Count);
 ```
 
-To trigger an event from a Hydro component, use a `Dispatch` method in your action method:
+To trigger an event from a Hydro component, use the `Dispatch` method in your action method:
 
 ```csharp
 // Counter.cshtml.cs
@@ -32,7 +32,7 @@ public class Counter : HydroComponent
 }
 ```
 
-To subscribe to an event in a parent component, use there the `Subscribe` method:
+To subscribe to an event in a parent component, use the `Subscribe` method:
 
 ```csharp
 // Summary.cshtml.cs
@@ -57,7 +57,7 @@ When a component's subscription is triggered by an event, the component will be 
 
 ## Dispatching
 
-As we saw in the above example, one of the ways to dispatch an event is to call `Dispatch` method:
+As we saw in the above example, one of the ways to dispatch an event is to call the `Dispatch` method:
 
 ```csharp
 // Counter.cshtml.cs
@@ -88,7 +88,7 @@ public class ProductList : HydroComponent
 ```
 
 In this case using a Hydro action might be an overkill, since it will cause an unnecessary additional request and
-rendering of the component. To avoid that, you can dispatch actions straight from your client code by using
+rendering of the component. To avoid this, you can dispatch actions straight from your client code by using
 `Model.Client.Dispatch`:
 
 ```razor
@@ -98,9 +98,9 @@ rendering of the component. To avoid that, you can dispatch actions straight fro
 </button>
 ```
 
-Now, after clicking the button, the event `OpenAddModal` will be triggered without calling Hydro action first.
+Now, after clicking the button, the event `OpenAddModal` will be triggered without calling the Hydro action first.
 
-Another way to avoid the extra render of the component is to use `[SkipOutput]` attribute on the Hydro action:
+Another way to avoid the extra render of the component is to use a `[SkipOutput]` attribute on the Hydro action:
 
 ```csharp
 // ProductList.cshtml.cs
@@ -113,7 +113,7 @@ public class ProductList : HydroComponent
 }
 ```
 
-You can also use SkipOutput method. It's useful when you want to conditionally skip the output:
+You can also use a `[SkipOutput]` method. It's useful when you want to conditionally skip the output:
 
 ```csharp
 // ProductList.cshtml.cs
@@ -165,7 +165,7 @@ done. The event execution won't be connected with the action's pipeline and will
 
 ## Event scope
 
-By default, the events are dispatched only to their parent component. To publish a global event use the following
+By default, the events are dispatched only to their parent component. To publish a global event, use the following
 method:
 
 ```c#
@@ -178,7 +178,7 @@ or
 DispatchGlobal(new ShowMessage(Content));
 ```
 
-Any component that subscribes for `ShowMessage` will be notified, no matter the component's location.
+Any component that subscribes to `ShowMessage` will be notified, no matter the component's location.
 
 ## Inlined subscription
 
@@ -221,12 +221,12 @@ public class ProductList : HydroComponent
 
 ## Event subject
 
-There might be a situation where you want to filter the events you receive in your subscription handler. It means that
-your component subscribes to an event, but handles it only when it contains a certain flag. That flag can be any string
+There might be a situation where you want to filter the events you receive in your subscription handler. This means that
+your component subscribes to an event, but handles it only when it contains a certain flag. That flag can be any string,
 and is called a `subject`.
 
-You can imagine a page with multiple lists of todos. Each list is a Hydro component that listens to events like
-`TodoAdded`, `TodoRemoved` or `TodoEdited`. When a todo is removed on one list, you don't want all the other lists to
+Imagine a page with multiple lists of todos. Each list is a Hydro component that listens to events like
+`TodoAdded`, `TodoRemoved` or `TodoEdited`. When a todo is removed from one list, you don't want all the other lists to
 receive and react to that event, but only the list that contained that todo item. This is solved in Hydro by using
 `subject` parameter, which in this case will be the list's id. When `TodoAdded`, `TodoRemoved` or `TodoEdited` are
 dispatched, `subject` is set to their list's id. The list component subscribes to those events with `subject` set to the
@@ -272,9 +272,9 @@ public class TodoList : HydroComponent
 }
 ```
 
-In `Subscribe` method call `subject` parameter is a `Func<string>` instead of `string`,
-because its value could be taken from component's properties that are not set yet, since it's
+In the `Subscribe` method, the call `subject` parameter is a `Func<string>` instead of `string`,
+because its value could be taken from the component's properties that are not set yet, since it's
 a constructor.
 
-> NOTE: If you subscribe for an event without specifying the subject, it will catch all the events
-> of that type, no matter if they were dispatched with subject or not.
+> NOTE: If you subscribe to an event without specifying the subject, it will catch all the events
+> of that type, no matter if they were dispatched with a subject or not.

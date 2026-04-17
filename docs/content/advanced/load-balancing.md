@@ -5,17 +5,17 @@ outline: deep
 # Load balancing the application
 
 Very often applications need to encrypt the data exposed to the client, for example:
-- authentication cookies
-- antiforgery token
-- Hydro is encrypting the state of the components
+- Authentication cookies
+- Antiforgery token
+- Hydro component state
 
 For that purpose ASP.NET Core apps use tools that are a part of [Data Protection](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/introduction), which provides a cryptographic API to protect data.
-It's using a **cryptographic key** for the encryption.
+It uses a **cryptographic key** for the encryption.
 
 ### Problem
 
-On hosting with only one node such a key is stored locally in `DataProtection-Keys` directory and everything works without additional configuration.
-When using load balancing, so when having multiple nodes with the same application, we have to **provide the same cryptographic key for all the nodes**,
+On a host with only one node such a key is stored locally in the `DataProtection-Keys` directory, and everything works without additional configuration.
+When using load balancing, i.e having multiple nodes with the same application, we must **provide the same cryptographic key to all the nodes**,
 so the encrypted data looks the same no matter which node generated it.
 
 ### Solution

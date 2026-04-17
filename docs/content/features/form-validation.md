@@ -92,7 +92,7 @@ public class LineData
 
 ## Custom validation
 
-It's possible to execute also custom validation. For example:
+It's also possible to execute custom validation. For example:
 
 ```csharp
 // Counter.cshtml.cs

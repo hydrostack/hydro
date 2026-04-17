@@ -4,7 +4,7 @@ outline: deep
 
 # Authorization
 
-Hydro provides `IHydroAuthorizationFilter` interface that can be used for creating custom
+Hydro provides the `IHydroAuthorizationFilter` interface which can be used for creating custom
 authorization attributes for Hydro components.
 
 Attribute example:
@@ -31,8 +31,8 @@ If `AuthorizeAsync` returns `false`, the component won't be rendered.
 
 ## Using component state for authorization process
 
-It might happen that authorization will be dependent on state of your component. One of the
-ways to solve it is to create an interface representing the state you need for authorization.
+It might occur that authorization will be dependent on the state of your component. One of the
+ways to solve this is to create an interface representing the state you need for authorization.
 
 Interface:
 ```c#

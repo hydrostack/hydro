@@ -7,9 +7,9 @@ outline: deep
 With Hydro you can create web applications without writing JavaScript, but
 sometimes there are very specific use cases where using small portions of JavaScript is needed to improve
 the user experience. Those use cases usually refer to creating reusable components, not the domain specific components. Examples where JavaScript is a nice addition to Hydro:
-- selecting the content of an element when focused
-- operating on existing JS libraries, like maps
-- changing the currently highlighted element in a list using arrows
+- Selecting the content of an element when focused
+- Operating on existing JS libraries, like maps
+- Changing the currently highlighted element in a list using arrows
 - ...
 
 In practice, there shouldn't be many places where JS is used, but it's good to have
@@ -17,7 +17,7 @@ an option to utilize it when needed.
 
 ## Using Alpine.js
 
-Hydro is using [Alpine.js](https://alpinejs.dev/) as the backbone for handling all interactions on the client side,
+Hydro uses [Alpine.js](https://alpinejs.dev/) as the backbone for handling all interactions on the client side,
 and it enables by default all the great features from that library. It means you can create
 Hydro components that utilize Alpine.js directives like [x-on](https://alpinejs.dev/directives/on), [x-data](https://alpinejs.dev/directives/data), [x-text](https://alpinejs.dev/directives/text), [x-ref](https://alpinejs.dev/directives/ref) and all the rest.
 
@@ -84,7 +84,7 @@ public class Counter : HydroComponent
 
 ### Execution Context
 
-The context of execution the JS expression is the component DOM element, and can be accessed via `this`. Example:
+The context of executing the JS expression is the component DOM element, and can be accessed via `this`. Example:
 
 ```c#
 // ProductDialog.cshtml.cs
@@ -100,14 +100,14 @@ public class ProductDialog : HydroComponent
 }
 ```
 
-In the above example, first we dispatch an event to notify dialogs container to change the state, and then we invoke JS expression
-to remove dialog component DOM element immediately, without waiting for the state update.
+In the above example, first we dispatch an event to notify the dialog container to change state, and then we invoke a JS expression
+to remove the dialog component DOM element immediately, without waiting for the state update.
 
 ## Generic events
 
-Hydro emits JavaScript events on `document` element during certain lifecycle moments of the component:
-- `HydroComponentInit` - triggered once component is initialized
-- `HydroComponentUpdate` - triggered after component content is updated
+Hydro emits JavaScript events on the `document` element during certain lifecycle moments of the component:
+- `HydroComponentInit` - triggered once the component is initialized
+- `HydroComponentUpdate` - triggered after the component content is updated
 - `HydroLocation`- triggered when the url changes via [hydro-link](navigation.html#navigation-via-links) or [Location](navigation.html#navigation-initiated-in-components-without-page-reload) method
 
 To catch these events you can use `document.addEventListener`:

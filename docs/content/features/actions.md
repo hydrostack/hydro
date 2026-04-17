@@ -162,8 +162,8 @@ public class Profile : HydroComponent
 
 ## JavaScript expression as a parameter
 
-In some cases, like integrating with JavaScript libraries like maps, rich-text editors, etc. it might be useful to
-call a Hydro action with parameters evaluated on client side via JavaScript expression. You can use then `Param.JS<T>(string value)` method, where:
+In some cases, like integrating with JavaScript libraries like maps, rich-text editors, etc, it might be useful to
+call a Hydro action with parameters evaluated on the client side via a JavaScript expression. You can then use the `Param.JS<T>(string value)` method, where:
 - `T`: type of the parameter
 - `value`: JavaScript expression to evaluate
 
@@ -200,7 +200,7 @@ public class Content : HydroComponent
 After clicking the button from the code above, Hydro will execute the expression
 `window.myInput.value` on the client side, and pass it as a `value` parameter to the `Update` action.
 
-> NOTE: In case of using widely this feature in your component, you can add:
+> NOTE: In the case of using this feature widely in your component, you can add:
 >
 > ```@using static Hydro.Param``` and call `JS` without `Param.` prefix.
 

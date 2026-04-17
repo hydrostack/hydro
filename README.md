@@ -5,7 +5,7 @@ Bring stateful and reactive components to ASP.NET Core without writing JavaScrip
 
 ---
 
-Hydro is an extension to ASP.NET Core MVC and Razor Pages. It extends View Components to make them reactive and stateful with ability to communicate with each other without page reloads. As a result, you can create powerful components and make your application to feel like SPA with zero or minimal amount of the JavaScript code (depending on the needs) and without separate front-end build step. It can be used in new or existing ASP.NET Core applications.
+Hydro is an extension to ASP.NET Core MVC and Razor Pages. It extends View Components to make them reactive and stateful with the ability to communicate with each other without page reloads. As a result, you can create powerful components and make your application feel like an SPA with zero, or minimal amount, of the JavaScript code (depending on requirements), and without a separate front-end build step. It can be used in new or existing ASP.NET Core applications.
 
 Hydro utilizes the following technologies to make it all work:
 
@@ -35,12 +35,12 @@ Alpine.js stands as a base for requests execution and  DOM swapping. But beyond 
 
 ## Installation
 
-In ASP.NET Core Razor Pages / MVC project 6.0+ install Hydro package:
+In an ASP.NET Core Razor Pages / MVC project 6.0+, install Hydro package:
 ```console
 dotnet add package Hydro
 ```
 
-If you don't have application yet, you can create it first:
+If you don't have an application yet, you can create it first:
 
 ```console
 dotnet new webapp -o MyApp
@@ -71,7 +71,7 @@ In layout's `head` tag:
 ```
 
 ## Quick start
-To create Hydro component, go to your components folder, for example in case of Razor Pages: `~/Pages/Components/`, and create these files:
+To create a Hydro component, go to your components folder, for example in case of Razor Pages: `~/Pages/Components/`, and create these files:
 
 ```razor
 <!-- Counter.cshtml -->

@@ -4,7 +4,7 @@ outline: deep
 
 # Overview
 
-**Hydro** is an extension to ASP.NET Core MVC and Razor Pages. It extends View Components to make them reactive and stateful with ability to communicate with each other without page reloads. As a result, you can create powerful components and make your application to feel like SPA with zero or minimal amount of the JavaScript code (depending on the needs) and without separate front-end build step. It also works well with existing ASP.NET Core applications.
+**Hydro** is an extension to ASP.NET Core MVC and Razor Pages. It extends View Components to make them reactive and stateful with the ability to communicate with each other without page reloads. As a result, you can create powerful components to make your application feel like an SPA with zero, or a minimal amount, of JavaScript code (depending on requirements), and without a separate front-end build step. It also works well with existing ASP.NET Core applications.
 
 ## How it works
 
@@ -19,4 +19,4 @@ Hydro utilizes the following technologies to make it all work:
 
 
 - **Alpine.js**  
-  Alpine.js stands as a base for requests execution and  DOM swapping. But beyond that, Alpine.js also empowers users by providing a framework for adding rich, client-side interactivity to the standard HTML. So, not only does it serve Hydro's internal operations, but it also provides an expansion point for users to enhance their web applications with powerful, interactive experiences.
+  Alpine.js stands as a base for request execution and DOM swapping. But beyond that, Alpine.js also empowers users by providing a framework for adding rich, client-side interactivity to the standard HTML. So, not only does it serve Hydro's internal operations, but it also provides an expansion point for users to enhance their web applications with powerful, interactive experiences.

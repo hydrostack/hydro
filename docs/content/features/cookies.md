@@ -58,7 +58,7 @@ public class UserSettings : HydroComponent
 
 ## Customizing cookies
 
-Default expiration date is 30 days, but can be customized with expiration parameter:
+Default expiration date is 30 days, but can be customized with an expiration parameter:
 
 ```c#
 CookieStorage.Set("theme", "light", expiration: TimeSpan.FromDays(7));

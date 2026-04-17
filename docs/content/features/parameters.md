@@ -4,7 +4,7 @@ outline: deep
 
 # Parameters
 
-Parameters are public properties on a component and are used to store component's state. They also allow the passing of
+Parameters are public properties on a component and are used to store a component's state. They also allow the passing of
 data or settings from a parent component to a child component. Parameters can include any types of values, such as
 integers, strings, and complex objects.
 
@@ -43,13 +43,13 @@ or
 @await Html.Hydro("Counter", new { Count = 10 })
 ```
 
-> NOTE: For multi-word properties, `Data` word cannot be used as the leading one, for example `DataSource`. `Database`
+> NOTE: For multi-word properties, `Data` word cannot be used as the leading word, for example `DataSource` is invalid. `Database`
 > is fine, since here `Data` is not a word, but just a part of the word.
 
 ## Transient properties
 
 Sometimes there is no need to persist the property value across the request because its value is valid only within
-the current request, for example a message after successful saving.
+the current request, for example a message after successfully saving.
 
 Another use case is handling the list of rows that you want to show in a table. If there are many rows and they should
 be
@@ -104,7 +104,7 @@ Now you can pass only the Name, but Currencies will not be available:
 
 ## State of the parameters in time
 
-The values are passed to the component only once and any update to the parameters won't refresh the parent component. If
+The values are passed to the component only once, and any update to the parameters won't refresh the parent component. If
 you want the component to refresh its state, you would have to use events or change the [key parameter](#key) of the
 component.
 
@@ -147,17 +147,17 @@ You can also use `key` to force re-render of your component:
 <items data="@Model.Items" key="@Model.Items.CalculateHashCode()" />
 ```
 
-Where `CalculateHashCode` is an extension method returning unique hash code for the collection.
-Now, whenever `Model.Items` changes, Hydro will re-render the component `Items` and pass new parameter.
+Where `CalculateHashCode` is an extension method returning unique a hash code for the collection.
+Now, whenever `Model.Items` changes, Hydro will re-render the component `Items` and pass a new parameter.
 
 ## Caching
 
-Let's imagine you need to show list of customers in a table. It's good to use caching per request for such rows data,
+Let's imagine you need to show a list of customers in a table. It's good to use caching per request for such rows of data,
 because you might want to access your filtered or sorted list in your view and actions, and you don't want to fetch the
 data each time you access it.
-Hydro has a solution for that which is built-in caching. To enable caching, create a read-only property that uses
-`Cache` method.
-If the property name is called `Customers`, you can get value either in view or component from the cache using
+Hydro has a solution for this, which is built-in caching. To enable caching, create a read-only property that uses
+the `Cache` method.
+If the property name is called `Customers`, you can get the value either in the view or the component from the cache using
 `Customers.Value`. Example:
 
 ```c#

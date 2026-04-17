@@ -23,7 +23,7 @@ hero:
 features:
   - icon: ♥️
     title: Razor Pages and MVC
-    details: Use familiar, server-side rendering strategy that has been a foundation of .NET web development for many years.
+    details: Use a familiar, server-side rendering strategy that has been a foundation of .NET web development for many years.
   - icon: 🧩️
     title: Components
     details: Build stateful and interactive components in an intuitive way, and use them in your Razor Pages or MVC views.

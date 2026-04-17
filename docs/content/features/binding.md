@@ -154,8 +154,8 @@ public class AddAttachment : HydroComponent
 }
 ```
 
-`DocumentFile` property represents the file that is sent by the user. We need to put `[Transient]` attribute on it, to make sure it's not
-serialized, kept on the page, and sent back to the server each time - it would be a lot of data to transfer in case of large files.
+The `DocumentFile` property represents the file that is sent by the user. We need to put the `[Transient]` attribute on it, to make sure it's not
+serialized, kept on the page, and sent back to the server each time - it would be a lot of data to transfer in the case of large files.
 
 The place where we interact with the uploaded file is the `BindAsync` method. We store the file in a temporary storage
 which we can use later when submitting the form.
@@ -214,4 +214,4 @@ public class AddAttachment : HydroComponent
 
 ## Styling
 
-`.hydro-request` CSS class is toggled on the elements that are currently in the binding process
+The `.hydro-request` CSS class is toggled on elements that are currently in the binding process.

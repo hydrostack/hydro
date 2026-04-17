@@ -4,9 +4,9 @@ outline: deep
 
 # Anti-forgery token
 
-Hydro supports mechanism built-in to ASP.NET Core to prevent prevent Cross-Site Request Forgery (XSRF/CSRF) attacks.
+Hydro supports the built-in mechanism in ASP.NET Core to prevent Cross-Site Request Forgery (XSRF/CSRF) attacks.
 
-In the configuration of services use:
+In your service configuration, use:
 ```c#
 services.AddHydro(options =>
 {
@@ -14,7 +14,7 @@ services.AddHydro(options =>
 });
 ```
 
-Make sure you've also added `meta` tag to the layout's `head`:
+Make sure you've also added the `meta` tag to the layout's `head`:
 ```html
 <meta name="hydro-config" />
 ```

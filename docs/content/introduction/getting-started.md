@@ -63,4 +63,4 @@ In layout's `head` tag:
 
 > NOTE: Hydro provides Alpine.js v3.14.3 with extensions combined into one file (`~/hydro/alpine.js`) for convenience. If you don't want to rely on the scripts provided by Hydro, you can manually specify Alpine.js sources. Make sure to include Alpine.js core script and Morph plugin.
 
-Now you are ready to create you first [component](/features/components).
+Now you are ready to create your first [component](/features/components).
