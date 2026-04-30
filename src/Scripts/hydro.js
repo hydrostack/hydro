@@ -164,6 +164,7 @@
     return {
       id: component.getAttribute("id"),
       name: component.getAttribute("hydro-name"),
+      prefix: component.getAttribute("hydro-prefix"),
       element: component
     };
   }
@@ -217,7 +218,7 @@
       throw new Error('Cannot find Hydro component');
     }
 
-    const url = `${config.BasePath}/${component.name}`;
+    const url = `${config.BasePath}/${component.prefix}/${component.name}`;
 
     if (!binding[component.id]) {
       binding[component.id] = {
@@ -278,7 +279,7 @@
   }
 
   async function hydroAction(el, component, action) {
-    const url = `${config.BasePath}/${component.name}/${action.name}`;
+    const url = `${config.BasePath}/${component.prefix}/${component.name}/${action.name}`;
 
     if (Array.from(el.attributes).some(attr => attr.name.startsWith('x-hydro-bind')) && isElementDirty(el)) {
       await hydroBind(el);
@@ -312,6 +313,7 @@
     const component = el.closest("[hydro]");
     const componentId = component.getAttribute("id");
     const componentName = component.getAttribute("hydro-name");
+    const componentPrefix = component.getAttribute("hydro-prefix");
 
     if (!component) {
       throw new Error('Cannot determine the closest Hydro component');
@@ -488,7 +490,7 @@
             setTimeout(() => {
               enablePlainScripts(component);
               document.dispatchEvent(new CustomEvent('HydroComponentUpdate', {
-                detail: { component: { id: componentId, name: componentName, element: component }, url, type }
+                detail: { component: { id: componentId, name: componentName, prefix: componentPrefix, element: component }, url, type }
               }));
             });
           }

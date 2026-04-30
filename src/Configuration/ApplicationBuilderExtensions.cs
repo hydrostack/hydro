@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Hydro.Utils;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.FileProviders;
@@ -16,36 +17,41 @@ public static class ApplicationBuilderExtensions
     /// <param name="builder">The <see cref="IApplicationBuilder"/> instance this method extends.</param>
     /// <param name="environment">Current environment</param>
     public static IApplicationBuilder UseHydro(this IApplicationBuilder builder, IWebHostEnvironment environment = null) =>
-        builder.UseHydro(environment, Assembly.GetCallingAssembly());
+        builder.UseHydro(environment, new[] { Assembly.GetCallingAssembly() });
 
     /// <summary>
     /// Adds configuration for hydro
     /// </summary>
     /// <param name="builder">The <see cref="IApplicationBuilder"/> instance this method extends.</param>
     /// <param name="environment">Current environment</param>
-    /// <param name="assembly">Assembly to scan for the Hydro components</param>
+    /// <param name="assemblies">List of assemblies to scan for the Hydro components</param>
     /// <returns></returns>
-    public static IApplicationBuilder UseHydro(this IApplicationBuilder builder, IWebHostEnvironment environment, Assembly assembly)
+    public static IApplicationBuilder UseHydro(this IApplicationBuilder builder, IWebHostEnvironment environment, Assembly[] assemblies)
     {
         builder.UseEndpoints(endpoints =>
         {
-            var types = assembly.GetTypes().Where(t => t.IsAssignableTo(typeof(HydroComponent))).ToList();
+            int assemblyCounter = 0;
+            foreach(var assembly in assemblies)
+            { 
+                var types = assembly.GetTypes().Where(t => t.IsAssignableTo(typeof(HydroComponent))).ToList();
 
-            foreach (var type in types)
-            {
-                endpoints.MapHydroComponent(type);
+                foreach (var type in types)
+                {
+                    endpoints.MapHydroComponent(type, SHA256Util.ComputeHashForAssemblyName(assembly.FullName));
+                }
+
+                assemblyCounter++;
             }
         });
 
         environment ??= (IWebHostEnvironment)builder.ApplicationServices.GetService(typeof(IWebHostEnvironment))!;
-        
-        var existingProvider = environment.WebRootFileProvider; 
+
+        var existingProvider = environment.WebRootFileProvider;
 
         var scriptsFileProvider = new ScriptsFileProvider(typeof(ApplicationBuilderExtensions).Assembly);
         var compositeProvider = new CompositeFileProvider(existingProvider, scriptsFileProvider);
         environment.WebRootFileProvider = compositeProvider;
-        
+
         return builder;
     }
-
 }

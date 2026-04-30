@@ -642,6 +642,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
 
         rootElement.SetAttributeValue("id", componentId);
         rootElement.SetAttributeValue("hydro-name", GetType().Name);
+        rootElement.SetAttributeValue("hydro-prefix", SHA256Util.ComputeHashForAssemblyName(GetType().Assembly.FullName));
         rootElement.SetAttributeValue("x-data", "hydro");
         rootElement.SetAttributeValue("key", componentId);
 
@@ -802,7 +803,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         {
             name = subscription.EventName,
             subject = subscription.SubjectRetriever?.Invoke(),
-            path = $"/hydro/{GetType().Name}/event".ToLower()
+            path = $"/hydro/{SHA256Util.ComputeHashForAssemblyName(GetType().Assembly.GetName().FullName)}/{GetType().Name}/event".ToLower()
         };
 
         var scriptNode = document.CreateElement("script");

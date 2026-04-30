@@ -15,13 +15,13 @@ namespace Hydro;
 
 internal static class HydroComponentsExtensions
 {
-    public static void MapHydroComponent(this IEndpointRouteBuilder app, Type componentType)
+    public static void MapHydroComponent(this IEndpointRouteBuilder app, Type componentType, string prefix = "")
     {
         
         var componentName = componentType.Name;
         var options = app.ServiceProvider.GetRequiredService<HydroOptions>();
         
-        app.MapPost($"{options.BasePath}/{componentName}/{{method?}}", async (
+        app.MapPost($"{options.BasePath}/{prefix}/{componentName}/{{method?}}", async (
             [FromServices] IServiceProvider serviceProvider,
             [FromServices] IViewComponentHelper viewComponentHelper,
             [FromServices] HydroOptions hydroOptions,
