@@ -4,6 +4,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using HtmlAgilityPack;
 using Hydro.Configuration;
 using Hydro.Services;
@@ -20,7 +22,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Newtonsoft.Json;
 using Int32Converter = Hydro.Utils.Int32Converter;
 
 namespace Hydro;
@@ -48,10 +49,10 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     private static readonly MethodInfo InvokeActionMethod = typeof(HydroComponent).GetMethod(nameof(InvokeAction), BindingFlags.Static | BindingFlags.NonPublic);
     private static readonly MethodInfo InvokeActionAsyncMethod = typeof(HydroComponent).GetMethod(nameof(InvokeActionAsync), BindingFlags.Static | BindingFlags.NonPublic);
 
-    internal static readonly JsonSerializerSettings JsonSerializerSettings = new()
+    internal static readonly JsonSerializerOptions JsonSerializerSettings = new()
     {
-        Converters = new JsonConverter[] { new Int32Converter() }.ToList(),
-        ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+        Converters = { new Int32Converter() },
+        ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles
     };
 
     private static readonly ConcurrentDictionary<Type, IHydroAuthorizationFilter[]> ComponentAuthorizationAttributes = new();
@@ -68,13 +69,13 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     /// <summary>
     /// Provides component's key value
     /// </summary>
-    [JsonProperty]
+    [JsonPropertyName(nameof(Key))]
     public string Key { get; set; }
 
     /// <summary>
     /// Component's HTML behavior when the key changes
     /// </summary>
-    [JsonProperty]
+    [JsonPropertyName(nameof(KeyBehavior))]
     public KeyBehavior KeyBehavior { get; set; }
 
     /// <summary>
@@ -810,7 +811,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         scriptNode.SetAttributeValue("type", "text/hydro");
         scriptNode.SetAttributeValue("hydro-event", "true");
         scriptNode.SetAttributeValue("x-data", "");
-        scriptNode.SetAttributeValue("x-on-hydro-event", JsonConvert.SerializeObject(eventData, JsonSerializerSettings));
+        scriptNode.SetAttributeValue("x-on-hydro-event", JsonSerializer.Serialize(eventData, JsonSerializerSettings));
         return scriptNode;
     }
 
@@ -855,7 +856,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
             })
             .ToList();
 
-        return JsonConvert.SerializeObject(data, JsonSerializerSettings);
+        return JsonSerializer.Serialize(data, JsonSerializerSettings);
     }
 
     private void PopulateClientScripts()
@@ -975,7 +976,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
     /// <returns>Payload</returns>
     public T GetPayload<T>() =>
         HttpContext.Request.Headers.TryGetValue(HydroConsts.RequestHeaders.Payload, out var payloadString)
-            ? JsonConvert.DeserializeObject<T>(payloadString)
+            ? JsonSerializer.Deserialize<T>(payloadString)
             : default;
 
     private async Task TriggerEvent()
@@ -1036,7 +1037,7 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
         if (HttpContext.Items.TryGetValue(HydroConsts.ContextItems.BaseModel, out var baseModel))
         {
             var unprotect = persistentState.Decompress((string)baseModel);
-            JsonConvert.PopulateObject(unprotect, this);
+            JsonPopulator.PopulateObject(unprotect, this);
         }
     }
 
@@ -1140,8 +1141,8 @@ public abstract class HydroComponent : TagHelper, IViewContextAware
             {
                 try
                 {
-                    var json = JsonConvert.SerializeObject(sourceProperty.GetValue(source), JsonSerializerSettings);
-                    sourceValue = JsonConvert.DeserializeObject(json, targetProperty.PropertyType);
+                    var json = JsonSerializer.Serialize(sourceProperty.GetValue(source), JsonSerializerSettings);
+                    sourceValue = JsonSerializer.Deserialize(json, targetProperty.PropertyType, JsonSerializerSettings);
                 }
                 catch
                 {

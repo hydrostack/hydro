@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Hydro.Services;
 
@@ -26,7 +26,7 @@ public class CookieStorage
                     ? _persistentState.Decompress(storage)
                     : storage;
 
-                return JsonConvert.DeserializeObject<T>(json);
+                return JsonSerializer.Deserialize<T>(json, JsonSettings);
             }
         }
         catch
@@ -43,11 +43,11 @@ public class CookieStorage
     public static TimeSpan DefaultExpirationTime = TimeSpan.FromDays(30);
 
     /// <summary>
-    /// Customizable default JsonSerializerSettings used for complex objects
+    /// Customizable default JsonSerializerOptions used for complex objects
     /// </summary>
-    public static JsonSerializerSettings JsonSettings = new()
+    public static JsonSerializerOptions JsonSettings = new()
     {
-        ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+        ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles
     };
 
     internal CookieStorage(HttpContext httpContext, IPersistentState persistentState)
@@ -78,7 +78,7 @@ public class CookieStorage
 
         if (value != null)
         {
-            var serializedValue = JsonConvert.SerializeObject(value, JsonSettings);
+            var serializedValue = JsonSerializer.Serialize(value, JsonSettings);
             var finalValue = encryption
                 ? _persistentState.Compress(serializedValue) 
                 : serializedValue;

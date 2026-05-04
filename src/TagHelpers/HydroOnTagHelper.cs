@@ -1,10 +1,10 @@
 ﻿using System.Linq.Expressions;
+using System.Text.Json;
 using Hydro.Utils;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
-using Newtonsoft.Json;
 using static Hydro.ExpressionExtensions;
 
 namespace Hydro.TagHelpers;
@@ -153,7 +153,7 @@ public sealed class HydroOnTagHelper : TagHelper
             subject = subject
         };
 
-        var invokeJson = JsonConvert.SerializeObject(invokeData, JsonSettings.SerializerSettings);
+        var invokeJson = JsonSerializer.Serialize(invokeData, JsonSettings.SerializerSettings);
         var invokeJsObject = DecodeJsExpressionsInJson(invokeJson);
 
         return $"dispatch($event, {invokeJsObject})";
@@ -179,7 +179,7 @@ public sealed class HydroOnTagHelper : TagHelper
             return null;
         }
 
-        var invokeJson = JsonConvert.SerializeObject(new
+        var invokeJson = JsonSerializer.Serialize(new
         {
             eventData.Value.Name,
             eventData.Value.Parameters

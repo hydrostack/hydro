@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Hydro;
 
@@ -44,6 +44,6 @@ public static class HydroHttpResponseExtensions
             payload
         };
 
-        response.Headers.Append("Hydro-Location", new StringValues(JsonConvert.SerializeObject(data)));
+        response.Headers.Append("Hydro-Location", new StringValues(JsonSerializer.Serialize(data)));
     }
 }

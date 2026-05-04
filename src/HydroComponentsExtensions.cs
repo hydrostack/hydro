@@ -9,12 +9,20 @@ using Microsoft.AspNetCore.Routing;
 using Hydro.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using System.Text.Json;
+using Hydro.Utils;
 
 namespace Hydro;
 
 internal static class HydroComponentsExtensions
 {
+    private static readonly JsonSerializerOptions _deserializerOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new Int32Converter() },
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
+    };
+
     public static void MapHydroComponent(this IEndpointRouteBuilder app, Type componentType)
     {
         
@@ -65,6 +73,7 @@ internal static class HydroComponentsExtensions
 
     private static async Task ExecuteRequestOperations(HttpContext context, string method)
     {
+
         if (!context.Request.HasFormContentType)
         {
             throw new InvalidOperationException("Hydro form doesn't contain form which is required");
@@ -78,9 +87,9 @@ internal static class HydroComponentsExtensions
 
         var model = hydroData["__hydro_model"].First();
         var type = hydroData["__hydro_type"].First();
-        var parameters = JsonConvert.DeserializeObject<Dictionary<string, object>>(hydroData["__hydro_parameters"].FirstOrDefault("{}"), HydroComponent.JsonSerializerSettings);
-        var eventData = JsonConvert.DeserializeObject<HydroEventPayload>(hydroData["__hydro_event"].FirstOrDefault(string.Empty));
-        var componentIds = JsonConvert.DeserializeObject<string[]>(hydroData["__hydro_componentIds"].FirstOrDefault("[]"));
+        var parameters = JsonSerializer.Deserialize<Dictionary<string, object>>(hydroData["__hydro_parameters"].FirstOrDefault("{}"), _deserializerOptions);
+        var eventData = JsonSerializer.Deserialize<HydroEventPayload>(hydroData["__hydro_event"].FirstOrDefault("null"), _deserializerOptions);
+        var componentIds = JsonSerializer.Deserialize<string[]>(hydroData["__hydro_componentIds"].FirstOrDefault("[]"), _deserializerOptions);
         var form = new FormCollection(formValues, hydroData.Files);
 
         context.Items.Add(HydroConsts.ContextItems.RenderedComponentIds, componentIds);
@@ -90,7 +99,7 @@ internal static class HydroComponentsExtensions
         if (eventData != null)
         {
             context.Items.Add(HydroConsts.ContextItems.EventName, eventData.Name);
-            context.Items.Add(HydroConsts.ContextItems.EventData, eventData.Data);
+            context.Items.Add(HydroConsts.ContextItems.EventData, eventData.Data.ToString());
             context.Items.Add(HydroConsts.ContextItems.EventSubject, eventData.Subject);
         }
 

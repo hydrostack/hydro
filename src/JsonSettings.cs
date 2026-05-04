@@ -1,15 +1,17 @@
 using Hydro.Utils;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Hydro;
 
 internal static class JsonSettings
 {
-    public static readonly JsonSerializerSettings SerializerSettings = new()
+    public static readonly JsonSerializerOptions SerializerSettings = new()
     {
-        Converters = new JsonConverter[] { new Int32Converter() }.ToList(),
-        NullValueHandling = NullValueHandling.Ignore,
-        ContractResolver = new CamelCasePropertyNamesContractResolver(),
+        Converters = { new Int32Converter() },
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = JsonNumberHandling.AllowReadingFromString,
     };
 }

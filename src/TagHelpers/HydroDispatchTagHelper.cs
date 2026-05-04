@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Hydro.TagHelpers;
 
@@ -60,7 +60,7 @@ public sealed class HydroDispatchTagHelper : TagHelper
         
         output.Attributes.Add(new(
             "x-hydro-dispatch",
-            new HtmlString(JsonConvert.SerializeObject(data)),
+            new HtmlString(JsonSerializer.Serialize(data, JsonSettings.SerializerSettings)),
             HtmlAttributeValueStyle.SingleQuotes)
         );
         

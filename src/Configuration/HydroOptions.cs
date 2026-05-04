@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Hydro.Configuration;
 
@@ -20,7 +20,7 @@ public class HydroOptions
     /// <summary>
     /// Serializer settings
     /// </summary>
-    public JsonSerializerSettings JsonSerializerSettings => HydroComponent.JsonSerializerSettings;
+    public JsonSerializerOptions JsonSerializerSettings => HydroComponent.JsonSerializerSettings;
     
     /// <summary>
     /// Indicates if antiforgery token should be exchanged during the communication

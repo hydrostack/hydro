@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-using Newtonsoft.Json;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
 using Microsoft.AspNetCore.Razor.TagHelpers;
+using System.Text.Json;
 
 namespace Hydro;
 
@@ -17,7 +17,7 @@ internal static class PropertyInjector
     public static string SerializeDeclaredProperties(Type type, object instance)
     {
         var regularProperties = GetRegularProperties(type, instance);
-        return JsonConvert.SerializeObject(regularProperties, HydroComponent.JsonSerializerSettings);
+        return JsonSerializer.Serialize(regularProperties, HydroComponent.JsonSerializerSettings);
     }
 
     private static IDictionary<string, object> GetRegularProperties(Type type, object instance) =>

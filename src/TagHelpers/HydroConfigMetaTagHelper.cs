@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using Microsoft.Extensions.DependencyInjection;
 using Hydro.Configuration;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Hydro.TagHelpers;
 
@@ -30,7 +30,7 @@ public sealed class HydroConfigMetaTagHelper : TagHelper
     {
         var hydroOptions = ViewContext.HttpContext.RequestServices.GetService<HydroOptions>();
         
-        var config = JsonConvert.SerializeObject(GetConfig(hydroOptions));
+        var config = JsonSerializer.Serialize(GetConfig(hydroOptions), HydroComponent.JsonSerializerSettings);
 
         output.Attributes.RemoveAll("content");
 
